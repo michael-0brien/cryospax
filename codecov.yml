@@ -1,0 +1,6 @@
+# Disable PR comments
+comment: false
+
+# Ignore patterns
+ignore:
+  - "docs"

@@ -1,0 +1,83 @@
+[project]
+name = "cryojax_spa"
+description = "Cryo-EM single particle analysis in JAX"
+authors = [
+    { name = "David Silva Sanchez", email = "david.silva@yale.edu" },
+    { name = "Michael O'Brien", email = "michaelobrien@g.harvard.edu" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Lesser General Public License v2 (LGPLv2)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+urls = {repository = "https://github.com/michael-0brien/cryojax-spa" }
+dynamic = ["version"]
+
+dependencies = [
+    "cryojax>=0.5.3",
+    "starfile",
+    "pandas",
+]
+
+[project.optional-dependencies]
+dev = ["pre-commit"]
+tests = [
+    "pytest",
+    "pytest-cov",
+]
+docs = [
+    "hippogriffe==0.2.2", # following Equinox documentation
+    "griffe==1.7.3",
+    "mkdocs==1.6.1",
+    "mkdocs-include-exclude-files==0.1.0",
+    "mkdocs-ipynb==0.1.1",
+    "mkdocs-material==9.6.7",
+    "mkdocstrings==0.28.3",
+    "mkdocstrings-python==1.16.8",
+    "pymdown-extensions==10.14.3"
+]
+programs = []
+
+[project.scripts]
+cryojax-spa = "cryojax_spa.__main__:main"
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "cryojax_spa/cryojax_spa_version.py"
+
+[tool.ruff]
+extend-include = ["*.ipynb"]
+line-length = 90
+src = []
+
+[tool.ruff.lint]
+fixable = ["I001", "F401", "UP"]
+ignore = ["E402", "E721", "E731", "E741", "F722"]
+select = ["E", "F", "I001", "UP"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+extra-standard-library = ["typing_extensions"]
+lines-after-imports = 2
+order-by-type = true
+
+[tool.black]
+line-length = 90
+
+[tool.pyright]
+reportIncompatibleMethodOverride = true
+reportIncompatibleVariableOverride = false  # Incompatible with eqx.AbstractVar
+include = ["cryojax_spa", "tests"]
