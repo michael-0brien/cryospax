@@ -3,6 +3,7 @@
 import abc
 import pathlib
 import re
+import typing
 import warnings
 from collections.abc import Callable
 from copy import deepcopy
@@ -78,42 +79,48 @@ RELION_SUPPORTED_PARTICLE_ENTRIES = [
 ]
 
 
-class _ParticleParameterInfo(TypedDict):
-    """Parameters for a particle stack from RELION."""
+if hasattr(typing, "GENERATING_DOCUMENTATION"):
+    _ParticleParameterInfo = dict[str, Any]  # pyright: ignore[reportAssignmentType]
+    _ParticleStackInfo = dict[str, Any]  # pyright: ignore[reportAssignmentType]
+    _ParticleParameterLike = dict[str, Any]  # pyright: ignore[reportAssignmentType]
+    _ParticleStackLike = dict[str, Any]  # pyright: ignore[reportAssignmentType]
+    _StarfileData = dict[str, Any]  # pyright: ignore[reportAssignmentType]
+    _MrcfileSettings = dict[str, Any]  # pyright: ignore[reportAssignmentType]
 
-    image_config: BasicImageConfig
-    pose: EulerAnglePose
-    transfer_theory: ContrastTransferTheory
+else:
 
-    metadata: pd.DataFrame | None
+    class _ParticleParameterInfo(TypedDict):
+        """Parameters for a particle stack from RELION."""
+
+        image_config: BasicImageConfig
+        pose: EulerAnglePose
+        transfer_theory: ContrastTransferTheory
+
+        metadata: pd.DataFrame | None
+
+    class _ParticleStackInfo(TypedDict):
+        """Particle stack info from RELION."""
+
+        parameters: _ParticleParameterInfo | None
+        images: Float[np.ndarray, "... y_dim x_dim"]
+
+    _ParticleParameterLike = dict[str, Any] | _ParticleParameterInfo
+    _ParticleStackLike = dict[str, Any] | _ParticleStackInfo
+
+    class _StarfileData(TypedDict):
+        optics: pd.DataFrame
+        particles: pd.DataFrame
+
+    class _MrcfileSettings(TypedDict):
+        prefix: str
+        output_folder: str | pathlib.Path
+        n_characters: int
+        delimiter: str
+        overwrite: bool
+        compression: str | None
 
 
-class _ParticleStackInfo(TypedDict):
-    """Particle stack info from RELION."""
-
-    parameters: _ParticleParameterInfo | None
-    images: Float[np.ndarray, "... y_dim x_dim"]
-
-
-_ParticleParameterLike = dict[str, Any] | _ParticleParameterInfo
-_ParticleStackLike = dict[str, Any] | _ParticleStackInfo
-
-
-class _StarfileData(TypedDict):
-    optics: pd.DataFrame
-    particles: pd.DataFrame
-
-
-class _MrcfileSettings(TypedDict):
-    prefix: str
-    output_folder: str | pathlib.Path
-    n_characters: int
-    delimiter: str
-    overwrite: bool
-    compression: str | None
-
-
-class AbstractParticleStarFile(
+class AbstractParticleStarfile(
     AbstractParticleParameterFile[_ParticleParameterInfo, _ParticleParameterLike]
 ):
     @property
@@ -200,7 +207,7 @@ class AbstractParticleStarFile(
         return deepcopy(self)
 
 
-class RelionParticleParameterFile(AbstractParticleStarFile):
+class RelionParticleParameterFile(AbstractParticleStarfile):
     """A dataset that wraps a RELION particle stack in
     [STAR](https://relion.readthedocs.io/en/latest/Reference/Conventions.html)
     format.
@@ -262,7 +269,9 @@ class RelionParticleParameterFile(AbstractParticleStarFile):
             If `'object'`, the loader loads/writes poses in the convention that
             the rotation is of the *object*. If `'frame'`, the rotation is of
             the frame (i.e. the rotation is inverted).
-            The pose passed to [`cryojax.simulator.make_image_model`][]
+            The pose passed to [`cryojax.simulator.make_image_model`]
+            (https://michael-0brien.github.io/cryojax/api/simulator/entry-point/
+            #cryojax.simulator.make_image_model)
             is always of the object, but advanced considerations may require
             setting `rotation_convention = 'frame'` (or manually calling
             `pose.to_inverse_rotation()`) to correctly match RELION and
@@ -545,7 +554,7 @@ class RelionParticleDataset(
 
     def __init__(
         self,
-        parameter_file: AbstractParticleStarFile,
+        parameter_file: AbstractParticleStarfile,
         path_to_relion_project: str | pathlib.Path,
         mode: Literal["r", "w"] = "r",
         mrcfile_settings: dict[str, Any] = {},
@@ -836,7 +845,7 @@ class RelionParticleDataset(
 
     @property
     @override
-    def parameter_file(self) -> AbstractParticleStarFile:
+    def parameter_file(self) -> AbstractParticleStarfile:
         return self._parameter_file
 
     @property

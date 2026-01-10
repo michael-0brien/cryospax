@@ -2,7 +2,7 @@ from ._dataset import (
     AbstractDataset as AbstractDataset,
     AbstractParticleDataset as AbstractParticleDataset,
     AbstractParticleParameterFile as AbstractParticleParameterFile,
-    AbstractParticleStarFile as AbstractParticleStarFile,
+    AbstractParticleStarfile as AbstractParticleStarfile,
     RelionParticleDataset as RelionParticleDataset,
     RelionParticleParameterFile as RelionParticleParameterFile,
 )
