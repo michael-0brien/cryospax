@@ -18,8 +18,8 @@ import numpy as np
 import pandas as pd
 import pytest
 from cryojax.rotations import SO3
-from cryojax_spa import RelionParticleDataset, RelionParticleParameterFile
-from cryojax_spa._dataset.relion import (
+from cryospax import RelionParticleDataset, RelionParticleParameterFile
+from cryospax._dataset.relion import (
     _validate_starfile_data,
 )
 from jaxtyping import TypeCheckError
@@ -902,9 +902,9 @@ def test_write_particle_batched_particle_parameters():
 
     loaded_params = parameter_file[:]
     for key in particle_params:
-        assert compare_pytrees(loaded_params[key], particle_params[key]), (
-            f"Mismatch for {key}"
-        )
+        assert compare_pytrees(
+            loaded_params[key], particle_params[key]
+        ), f"Mismatch for {key}"
     # Clean up
     shutil.rmtree("tests/outputs/starfile_writing/")
 

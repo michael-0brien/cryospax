@@ -8,7 +8,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
-from cryojax_spa import (
+from cryospax import (
     RelionParticleDataset,
     RelionParticleParameterFile,
     simulate_particle_stack,

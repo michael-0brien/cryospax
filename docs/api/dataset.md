@@ -1,13 +1,13 @@
 # Cryo-EM dataset manipulation in RELION and cryoSPARC
 
-CryoJAX SPA implements interfaces for reading/writing to common cryo-EM software frameworks, such as RELION and cryoSPARC.
+CryoSPAX implements interfaces for reading/writing to common cryo-EM software frameworks, such as RELION and cryoSPARC.
 
 ## Reading/writing parameter files (e.g. STAR files)
 
-??? abstract "`cryojax_spa.AbstractParticleStarfile`"
-    ::: cryojax_spa.AbstractParticleStarfile
+??? abstract "`cryospax.AbstractParticleStarfile`"
+    ::: cryospax.AbstractParticleStarfile
 
-::: cryojax_spa.RelionParticleParameterFile
+::: cryospax.RelionParticleParameterFile
     options:
         members:
             - __init__
@@ -18,10 +18,10 @@ CryoJAX SPA implements interfaces for reading/writing to common cryo-EM software
 
 ## Datasets: parameter and image manipulation
 
-??? abstract "`cryojax_spa.AbstractParticleDataset`"
-    ::: cryojax_spa.AbstractParticleDataset
+??? abstract "`cryospax.AbstractParticleDataset`"
+    ::: cryospax.AbstractParticleDataset
 
-::: cryojax_spa.RelionParticleDataset
+::: cryospax.RelionParticleDataset
     options:
         members:
             - __init__

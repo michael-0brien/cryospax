@@ -8,12 +8,12 @@ theme:
         - toc.integrate
 
 site_name: Cryo-EM single particle analysis in JAX
-site_description: The documentation for cryoJAX SPA.
+site_description: The documentation for cryoSPAX.
 site_author: Michael O'Brien
-site_url: https://michael-0brien.github.io/cryojax-spa/
+site_url: https://michael-0brien.github.io/cryospax/
 
-repo_url: https://github.com/michael-0brien/cryojax-spa
-repo_name: michael-0brien/cryojax-spa
+repo_url: https://github.com/michael-0brien/cryospax
+repo_name: michael-0brien/cryospax
 edit_uri: ""
 
 strict: true

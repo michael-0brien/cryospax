@@ -1,7 +1,7 @@
 <h1 align='center'>Cryo-EM single particle analysis in JAX</h1>
 
-[![Continuous Integration](https://github.com/michael-0brien/cryojax-spa/actions/workflows/ci_build.yml/badge.svg)](https://github.com/michael-0brien/cryojax-spa/actions/workflows/ci_build.yml?branch=dev)
-[![codecov](https://codecov.io/gh/michael-0brien/cryojax-spa/branch/dev/graph/badge.svg)](https://codecov.io/gh/michael-0brien/cryojax-spa)
+[![Continuous Integration](https://github.com/michael-0brien/cryospax/actions/workflows/ci_build.yml/badge.svg)](https://github.com/michael-0brien/cryospax/actions/workflows/ci_build.yml?branch=dev)
+[![codecov](https://codecov.io/gh/michael-0brien/cryospax/branch/dev/graph/badge.svg)](https://codecov.io/gh/michael-0brien/cryospax)
 
 # Installation
 
@@ -10,7 +10,7 @@
 ## Load a RELION STAR file
 
 ```python
-import cryojax_spa as spa
+import cryospax as spa
 
 # Instantiate RELION dataset
 parameter_file = spa.RelionParticleParameterFile(path_to_starfile="./path/to/particles.star")

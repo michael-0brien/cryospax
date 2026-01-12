@@ -5,8 +5,8 @@ from pathlib import Path
 
 def main():
     help_message = (
-        "Welcome to the `cryojax-spa` command line interface. "
-        "Invoke a program with syntax: 'cryojax-spa example-program ...'"
+        "Welcome to the `cryospax` command line interface. "
+        "Invoke a program with syntax: 'cryospax example-program ...'"
     )
     if len(sys.argv) < 2:
         print(help_message)
@@ -19,5 +19,5 @@ def main():
         command = [str(path_to_program)] + args
         os.execv(sys.executable, [sys.executable, *command])
     else:
-        print(f"Error: could not find program 'cryojax-spa {subcommand}'.")
+        print(f"Error: could not find program 'cryospax {subcommand}'.")
         sys.exit(1)

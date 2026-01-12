@@ -1,1 +1,1 @@
-# Welcome to cryoJAX SPA!
+# Welcome to cryoSPAX!

@@ -28,7 +28,7 @@ def simulate_particle_stack(
     **kwargs: Any,
 ):
     """Write a stack of images from parameters contained in a
-    [`cryojax_spa.AbstractParticleDataset`][].
+    [`cryospax.AbstractParticleDataset`][].
 
     !!! note
         This function works generally for a `simulate_fn`
@@ -48,12 +48,12 @@ def simulate_particle_stack(
         to be simulated.
 
     *Example 1*: Basic usage such as instantiating an
-    [`cryojax_spa.AbstractParticleDataset`][] and writing a
+    [`cryospax.AbstractParticleDataset`][] and writing a
     `simulate_fn`
 
     ```python
     import cryojax.simulator as cxs
-    import cryojax_spa as spa
+    import cryospax as spa
     import jax
     from jaxtyping import PyTree
 
@@ -94,7 +94,7 @@ def simulate_particle_stack(
 
     ```python
     import cryojax.simulator as cxs
-    import cryojax_spa as spa
+    import cryospax as spa
     import jax
     from jaxtyping import Array, PyTree, Shaped
 
@@ -142,7 +142,7 @@ def simulate_particle_stack(
     **Arguments:**
 
     - `dataset`:
-        The [`cryojax_spa.AbstractParticleDataset`][] class.
+        The [`cryospax.AbstractParticleDataset`][] class.
         Note that this must be passed in *writing mode*, i.e. `mode = 'w'`.
     - `simulate_fn`:
         A callable that computes the image stack from the parameters contained

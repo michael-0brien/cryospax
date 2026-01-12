@@ -1,5 +1,5 @@
 [project]
-name = "cryojax_spa"
+name = "cryospax"
 description = "Cryo-EM single particle analysis in JAX"
 authors = [
     { name = "David Silva Sanchez", email = "david.silva@yale.edu" },
@@ -17,7 +17,7 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
-urls = {repository = "https://github.com/michael-0brien/cryojax-spa" }
+urls = {repository = "https://github.com/michael-0brien/cryospax" }
 dynamic = ["version"]
 
 dependencies = [
@@ -46,7 +46,7 @@ docs = [
 programs = []
 
 [project.scripts]
-cryojax-spa = "cryojax_spa.__main__:main"
+cryospax = "cryospax.__main__:main"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
@@ -56,7 +56,7 @@ build-backend = "hatchling.build"
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "cryojax_spa/cryojax_spa_version.py"
+version-file = "cryospax/cryospax_version.py"
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
@@ -81,4 +81,4 @@ line-length = 90
 reportIncompatibleMethodOverride = true
 reportIncompatibleVariableOverride = false  # Incompatible with eqx.AbstractVar
 reportInvalidTypeForm = false  # Needed for keeping objects TypedDict private and undocumented
-include = ["cryojax_spa", "tests"]
+include = ["cryospax", "tests"]
