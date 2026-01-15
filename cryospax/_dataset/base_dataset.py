@@ -1,4 +1,4 @@
-"""Functionality in `cryojax-spa` for datasets."""
+"""Functionality in `cryospax` for datasets."""
 
 import abc
 import pathlib
@@ -15,7 +15,7 @@ T2 = TypeVar("T2")
 
 
 class AbstractDataset(abc.ABC, Generic[T]):
-    """An abstraction of a dataset in `cryojax-spa`. To create an
+    """An abstraction of a dataset in `cryospax`. To create an
     `AbstractDataset`, implement its `__init__`, `__getitem__`, and
     `__len__` methods.
 

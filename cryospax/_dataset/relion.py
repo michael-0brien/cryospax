@@ -269,9 +269,7 @@ class RelionParticleParameterFile(AbstractParticleStarfile):
             If `'object'`, the loader loads/writes poses in the convention that
             the rotation is of the *object*. If `'frame'`, the rotation is of
             the frame (i.e. the rotation is inverted).
-            The pose passed to [`cryojax.simulator.make_image_model`]
-            (https://michael-0brien.github.io/cryojax/api/simulator/entry-point/
-            #cryojax.simulator.make_image_model)
+            The pose passed to [`cryojax.simulator.make_image_model`](https://michael-0brien.github.io/cryojax/api/simulator/entry-point/#cryojax.simulator.make_image_model)
             is always of the object, but advanced considerations may require
             setting `rotation_convention = 'frame'` (or manually calling
             `pose.to_inverse_rotation()`) to correctly match RELION and
@@ -279,7 +277,7 @@ class RelionParticleParameterFile(AbstractParticleStarfile):
         - `pad_options`:
             Padding options for image simulation, passed to the `BasicImageConfig`.
             See `BasicImageConfig` for documentation.
-        """
+        """  # noqa: E501
         # Private attributes
         self._pad_options = pad_options
         self._mode = _validate_mode(mode)
