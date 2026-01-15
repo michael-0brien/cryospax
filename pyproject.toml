@@ -1,6 +1,6 @@
 [project]
 name = "cryospax"
-description = "A small library for cryo-EM single particle analysis in JAX "
+description = "A small library for cryo-EM single particle analysis in JAX."
 authors = [
     { name = "David Silva Sanchez", email = "david.silva@yale.edu" },
     { name = "Michael O'Brien", email = "michaelobrien@g.harvard.edu" }
@@ -80,5 +80,5 @@ line-length = 90
 [tool.pyright]
 reportIncompatibleMethodOverride = true
 reportIncompatibleVariableOverride = false  # Incompatible with eqx.AbstractVar
-reportInvalidTypeForm = false  # Needed for keeping objects TypedDict private and undocumented
+reportInvalidTypeForm = false  # Needed for keeping TypedDict classes private and undocumented
 include = ["cryospax", "tests"]
