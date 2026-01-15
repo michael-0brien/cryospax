@@ -2,6 +2,10 @@
 
 Contributions to this repository are welcome.
 
+## What features belong in `cryospax`?
+
+TODO
+
 ## Making a feature request
 
 To submit a feature request, open an a thread on the [issues](https://github.com/michael-0brien/cryospax/issues) page. After discussing the contribution, please implement a draft of it in your local fork of `cryospax`. Then, open a [pull request](https://github.com/michael-0brien/cryospax/pulls).
