@@ -1,4 +1,7 @@
 # generate-starfile-and-mrcs tutorial generated data
+docs/examples/outputs/
+.coverage
+tests/outputs/
 .venv/
 .vscode/settings.json
 .DS_STORE
@@ -11,5 +14,3 @@ build/
 dist/
 site/
 __pycache__
-.ruff_cache/
-.pytest_cache/

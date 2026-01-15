@@ -1,6 +1,6 @@
 [project]
 name = "cryospax"
-description = "Cryo-EM single particle analysis in JAX"
+description = "A small library for cryo-EM single particle analysis in JAX "
 authors = [
     { name = "David Silva Sanchez", email = "david.silva@yale.edu" },
     { name = "Michael O'Brien", email = "michaelobrien@g.harvard.edu" }

@@ -5,7 +5,7 @@
 
 CryoSPAX is a *small* library built to support building [cryoJAX](https://github.com/michael-0brien/cryojax) applications for single-particle analysis (SPA) and deploying them at scale.
 
-# Installation
+## Installation
 
 If you are not installing JAX with GPU or TPU support, installing `cryospax` in a fresh [`uv`](https://docs.astral.sh/uv/pip/environments/#creating-a-virtual-environment) environment is as simple as
 
@@ -27,6 +27,6 @@ uv pip install -e '.[dev,tests]'
 uv run precommit install
 ```
 
-# Acknowledgements
+## Acknowledgements
 
 - CryoSPAX is made possible by the [`teamtomo`](https://teamtomo.org/) ecosystem for open source cryo-EM software (e.g. [`starfile`](https://github.com/teamtomo/starfile)).
