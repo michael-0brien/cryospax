@@ -4,7 +4,7 @@ from .base_dataset import (
     AbstractParticleParameterFile as AbstractParticleParameterFile,
 )
 from .relion import (
-    AbstractParticleStarfile as AbstractParticleStarfile,
+    AbstractRelionParticleParameterFile as AbstractRelionParticleParameterFile,
     RelionParticleDataset as RelionParticleDataset,
     RelionParticleParameterFile as RelionParticleParameterFile,
 )

@@ -17,8 +17,8 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
             members:
                 - __init__
 
-??? abstract "`cryospax.AbstractParticleStarfile`"
-    ::: cryospax.AbstractParticleStarfile
+??? abstract "`cryospax.AbstractRelionParticleParameterFile`"
+    ::: cryospax.AbstractRelionParticleParameterFile
         options:
             members:
                 - __init__

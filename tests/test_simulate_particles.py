@@ -24,8 +24,7 @@ def test_write_simulated_image_stack_from_starfile_jit(sample_starfile_path):
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
         mode="r",
-        loads_envelope=False,
-        loads_metadata=False,
+        options=dict(loads_envelope=False, loads_metadata=False),
     )
     parameter_file.path_to_starfile = (
         "tests/outputs/starfile_writing/test_particle_parameters.star"
@@ -105,8 +104,7 @@ def test_write_simulated_image_stack_from_starfile_nojit(sample_starfile_path):
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
         mode="r",
-        loads_envelope=False,
-        loads_metadata=False,
+        options=dict(loads_envelope=False, loads_metadata=False),
     )
     parameter_file.path_to_starfile = (
         "tests/outputs/starfile_writing/test_particle_parameters.star"
@@ -166,8 +164,7 @@ def test_write_single_image(sample_starfile_path):
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
         mode="r",
-        loads_envelope=False,
-        loads_metadata=False,
+        options=dict(loads_envelope=False, loads_metadata=False),
         selection_filter=selection_filter,
     )
     parameter_file.path_to_starfile = (
@@ -237,8 +234,7 @@ def test_load_multiple_mrcs():
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         mode="w",
         exists_ok=True,
-        updates_optics_group=True,
-        loads_envelope=True,
+        options=dict(updates_optics_group=True, loads_envelope=True),
     )
     parameters_file.append(particle_params)
 

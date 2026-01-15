@@ -9,7 +9,7 @@ theme:
 
 site_name: Cryo-EM single particle analysis in JAX
 site_description: The documentation for cryoSPAX.
-site_author: Michael O'Brien
+site_author: Michael O'Brien and David Silva Sanchez
 site_url: https://michael-0brien.github.io/cryospax/
 
 repo_url: https://github.com/michael-0brien/cryospax
