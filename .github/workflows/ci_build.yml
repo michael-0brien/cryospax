@@ -37,7 +37,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           uv run --no-sync pytest -q tests \
-            --cov=cryospax \
+            --cov \
             --cov-branch \
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing
