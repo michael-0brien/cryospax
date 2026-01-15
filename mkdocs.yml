@@ -1,0 +1,81 @@
+theme:
+    name: material
+    icon:
+        logo: material/snowflake
+    features:
+        - navigation.tabs
+        - navigation.tabs.sticky
+        - toc.integrate
+
+site_name: Cryo-EM single particle analysis in JAX
+site_description: The documentation for cryoSPAX.
+site_author: Michael O'Brien and David Silva Sanchez
+site_url: https://michael-0brien.github.io/cryospax/
+
+repo_url: https://github.com/michael-0brien/cryospax
+repo_name: michael-0brien/cryospax
+edit_uri: ""
+
+strict: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+extra_css:
+    - _static/custom_css.css
+
+markdown_extensions:
+    - pymdownx.arithmatex:
+        generic: true
+    - pymdownx.superfences  # Seems to enable syntax highlighting when used with the Material theme.
+    - pymdownx.details  # Allowing hidden expandable regions denoted by ???
+    - admonition
+    - toc:
+        permalink: "¤"  # Adds a clickable permalink to each section heading
+        toc_depth: 4
+
+plugins:
+    # - autorefs  # Cross-links to headings
+    - include_exclude_files:
+        exclude:
+            - "examples/.ipynb_checkpoints/"
+            - "examples/data"
+    - ipynb
+    - hippogriffe:
+        extra_public_objects:
+            - numpy.ndarray
+            - equinox.Module
+            - pandas.DataFrame
+    - mkdocstrings:
+        handlers:
+          python:
+            options:
+                annotations_path: brief
+                force_inspection: true
+                heading_level: 4
+                inherited_members: true
+                members_order: source
+                show_bases: false
+                show_if_no_docstring: true
+                show_overloads: false
+                show_root_heading: true
+                show_signature_annotations: true
+                show_source: false
+                show_symbol_type_heading: true
+                show_symbol_type_toc: true
+                separate_signature: false
+                line_length: 85
+
+nav:
+    - 'index.md'
+    - 'overview.md'
+    - Examples:
+        - Read a dataset: 'examples/read-dataset.ipynb'
+        - Simulate particles and write STAR file: 'examples/simulate-particles.ipynb'
+    - API:
+        - 'api/dataset.md'
+        - 'api/simulate-particles.md'
+    - cli.md
+    - 'faq.md'

@@ -1,0 +1,35 @@
+name: Build docs
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: |
+          uv venv --python=${{ matrix.python-version }}
+          uv pip install --upgrade pip
+          uv pip install '.[docs]'
+
+      - name: Build
+        run: |
+          uv run --no-sync mkdocs build
+
+      # Push the site to github-pages
+      - name: GitHub Pages action
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site

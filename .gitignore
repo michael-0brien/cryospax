@@ -1,0 +1,16 @@
+# generate-starfile-and-mrcs tutorial generated data
+docs/examples/outputs/
+.coverage
+tests/outputs/
+.venv/
+.vscode/settings.json
+.DS_STORE
+*.swp
+*_version.py
+**/__pycache__
+**/.ipynb_checkpoints
+*.egg-info/
+build/
+dist/
+site/
+__pycache__
