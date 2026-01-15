@@ -1,6 +1,6 @@
 # Overview
 
-CryoSPAX is built to support scientists looking to create of custom single particle analysis workflows that leverage [cryoJAX](https://github.com/michael-0brien/cryojax) at scale. It is a *small package* that seeks to simplify cryo-EM research; it does not provide end-to-end single particle analysis workflows.
+CryoSPAX is built to support applications of [cryoJAX](https://github.com/michael-0brien/cryojax) for building cryo-EM single particle analysis workflows and algorithms---and deploying them at scale. It is a *small package* that seeks to simplify new cryo-EM research; it does not provide end-to-end single particle analysis workflows.
 
 ## What does cryoSPAX implement?
 
@@ -9,11 +9,11 @@ CryoSPAX is built to support scientists looking to create of custom single parti
 CryoSPAX includes tools for manipulating datasets in existing single particle analysis frameworks, such as RELION.
 
 ```python
-import cryospax as spa
+import cryospax as spx
 
 # Instantiate RELION dataset
-parameter_file = spa.RelionParticleParameterFile(path_to_starfile="./path/to/particles.star")
-dataset = spa.RelionParticleDataset(parameter_file, path_to_relion_project="./path/to/project/")
+parameter_file = spx.RelionParticleParameterFile(path_to_starfile="./path/to/particles.star")
+dataset = spx.RelionParticleDataset(parameter_file, path_to_relion_project="./path/to/project/")
 # Load first 10 images and particle parameters into `cryojax` classes
 particle_info = dataset[0:10]
 images, parameters = particle_info["images"], particle_info["parameters"]

@@ -2,7 +2,7 @@
 
 CryoSPAX implements interfaces for reading/writing to common cryo-EM software frameworks, such as RELION and cryoSPARC.
 
-???+ abstract "`cryospax.AbstractDataset`"
+??? abstract "`cryospax.AbstractDataset`"
     ::: cryospax.AbstractDataset
         options:
             members:
