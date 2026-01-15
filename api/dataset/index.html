@@ -1,0 +1,1528 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="The documentation for cryoSPAX.">
+      
+      
+        <meta name="author" content="Michael O'Brien and David Silva Sanchez">
+      
+      
+        <link rel="canonical" href="https://michael-0brien.github.io/cryospax/api/dataset/">
+      
+      
+        <link rel="prev" href="../../examples/simulate-particles/">
+      
+      
+        <link rel="next" href="../simulate-particles/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.7">
+    
+    
+      
+        <title>Cryo-EM dataset manipulation in RELION and cryoSPARC - Cryo-EM single particle analysis in JAX</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.8608ea7d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/_hippogriffe.css">
+    
+      <link rel="stylesheet" href="../../_static/custom_css.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#cryo-em-dataset-manipulation-in-relion-and-cryosparc" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Cryo-EM single particle analysis in JAX" class="md-header__button md-logo" aria-label="Cryo-EM single particle analysis in JAX" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m20.79 13.95-2.33.62-2-1.13v-2.88l2-1.13 2.33.62.52-1.93-1.77-.47.46-1.77-1.93-.52-.62 2.33-2 1.13L13 7.38V5.12l1.71-1.71L13.29 2 12 3.29 10.71 2 9.29 3.41 11 5.12v2.26L8.5 8.82l-2-1.13-.58-2.33L4 5.88l.47 1.77-1.77.47.52 1.93 2.33-.62 2 1.13v2.89l-2 1.13-2.33-.62-.52 1.93 1.77.47L4 18.12l1.93.52.62-2.33 2-1.13L11 16.62v2.26l-1.71 1.71L10.71 22 12 20.71 13.29 22l1.41-1.41-1.7-1.71v-2.26l2.5-1.45 2 1.13.62 2.33 1.88-.51-.47-1.77 1.77-.47zM9.5 10.56 12 9.11l2.5 1.45v2.88L12 14.89l-2.5-1.45z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cryo-EM single particle analysis in JAX
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Cryo-EM dataset manipulation in RELION and cryoSPARC
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/michael-0brien/cryospax" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    michael-0brien/cryospax
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Welcome to cryoSPAX!
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../overview/" class="md-tabs__link">
+        
+  
+    
+  
+  Overview
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../examples/read-dataset/" class="md-tabs__link">
+          
+  
+  Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  API
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli/" class="md-tabs__link">
+        
+  
+    
+  
+  The command line interface
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQs
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Cryo-EM single particle analysis in JAX" class="md-nav__button md-logo" aria-label="Cryo-EM single particle analysis in JAX" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m20.79 13.95-2.33.62-2-1.13v-2.88l2-1.13 2.33.62.52-1.93-1.77-.47.46-1.77-1.93-.52-.62 2.33-2 1.13L13 7.38V5.12l1.71-1.71L13.29 2 12 3.29 10.71 2 9.29 3.41 11 5.12v2.26L8.5 8.82l-2-1.13-.58-2.33L4 5.88l.47 1.77-1.77.47.52 1.93 2.33-.62 2 1.13v2.89l-2 1.13-2.33-.62-.52 1.93 1.77.47L4 18.12l1.93.52.62-2.33 2-1.13L11 16.62v2.26l-1.71 1.71L10.71 22 12 20.71 13.29 22l1.41-1.41-1.7-1.71v-2.26l2.5-1.45 2 1.13.62 2.33 1.88-.51-.47-1.77 1.77-.47zM9.5 10.56 12 9.11l2.5 1.45v2.88L12 14.89l-2.5-1.45z"/></svg>
+
+    </a>
+    Cryo-EM single particle analysis in JAX
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/michael-0brien/cryospax" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    michael-0brien/cryospax
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Welcome to cryoSPAX!
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../overview/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/read-dataset/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Read a dataset
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/simulate-particles/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Simulate particles and write STAR file
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    API
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            API
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Cryo-EM dataset manipulation in RELION and cryoSPARC
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Cryo-EM dataset manipulation in RELION and cryoSPARC
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#cryospax.AbstractDataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;AbstractDataset
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#readingwriting-parameter-files-eg-star-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reading/writing parameter files (e.g. STAR files)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reading/writing parameter files (e.g. STAR files)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cryospax.AbstractParticleParameterFile" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;AbstractParticleParameterFile
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cryospax.AbstractRelionParticleParameterFile" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;AbstractRelionParticleParameterFile
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cryospax.RelionParticleParameterFile" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;RelionParticleParameterFile
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#datasets-parameter-and-image-manipulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Datasets: parameter and image manipulation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Datasets: parameter and image manipulation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cryospax.AbstractParticleDataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;AbstractParticleDataset
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cryospax.RelionParticleDataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;RelionParticleDataset
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../simulate-particles/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Simulate particle stacks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    The command line interface
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="cryo-em-dataset-manipulation-in-relion-and-cryosparc">Cryo-EM dataset manipulation in RELION and cryoSPARC<a class="headerlink" href="#cryo-em-dataset-manipulation-in-relion-and-cryosparc" title="Permanent link">¤</a></h1>
+<p>CryoSPAX implements interfaces for reading/writing to common cryo-EM software frameworks, such as RELION and cryoSPARC.</p>
+<details class="abstract">
+<summary><code>cryospax.AbstractDataset</code></summary>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="cryospax.AbstractDataset" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.AbstractDataset</code>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e1056b2afb84ed92cfa8149aa4cbe492c6dc469d/cryospax/_dataset/base_dataset.py#L17-L65"><code class='hippogriffe-repo-url'></code></a>
+
+
+<a href="#cryospax.AbstractDataset" class="headerlink" title="Permanent link">¤</a></h4>
+
+
+    <div class="doc doc-contents first">
+
+
+        <p>An abstraction of a dataset in <code>cryospax</code>. To create an
+<code>AbstractDataset</code>, implement its <code>__init__</code>, <code>__getitem__</code>, and
+<code>__len__</code> methods.</p>
+<p>This follows the
+<a href="https://pytorch.org/docs/stable/data.html#torch.utils.data.Dataset"><code>torch.utils.data.Dataset</code></a>
+API and can easily be wrapped into a pytorch <code>Dataset</code> with something like the
+following pattern:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.utils.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">CustomTorchDataset</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="n">cryojax_dataset</span><span class="p">:</span> <span class="n">AbstractDataset</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cryojax_dataset</span> <span class="o">=</span> <span class="n">cryojax_dataset</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__getitem___</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+        <span class="n">particle_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cryojax_dataset</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span> <span class="n">images</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">particle_info</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">]))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cryojax_dataset</span><span class="p">)</span>
+</code></pre></div>
+<p>JAX also includes packages for dataloaders, such as
+<a href="https://github.com/BirkhoffG/jax-dataloader/tree/main"><code>jax-dataloaders</code></a> and
+<a href="https://github.com/google/grain"><code>grain</code></a>.</p>
+<div class="admonition question">
+<p class="admonition-title">How do I implement an <code>AbstractDataset</code>?</p>
+<p>Implementing an <code>AbstractDataset</code> is not like implementing
+classes in <code>cryojax</code>, which are <code>equinox.Module</code>s.
+An <code>equinox.Module</code> is just a pytree, so it can be safely
+passed to <code>jax</code> transformations. However, an <code>AbstractDataset</code>
+can <em>not</em> be passed to <code>jax</code> transformations. Therefore, it is
+not a pytree. Rather, it is a normal python class.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.AbstractDataset.__getitem__" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="fm">__getitem__</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="o">~</span><span class="n">T</span></code>
+  
+
+
+<a href="#cryospax.AbstractDataset.__getitem__" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div></details>
+<h3 id="readingwriting-parameter-files-eg-star-files">Reading/writing parameter files (e.g. STAR files)<a class="headerlink" href="#readingwriting-parameter-files-eg-star-files" title="Permanent link">¤</a></h3>
+<details class="abstract">
+<summary><code>cryospax.AbstractParticleParameterFile</code></summary>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="cryospax.AbstractParticleParameterFile" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.AbstractParticleParameterFile(<a class="autorefs autorefs-internal" href="#cryospax.AbstractDataset">cryospax.AbstractDataset</a>)</code>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e1056b2afb84ed92cfa8149aa4cbe492c6dc469d/cryospax/_dataset/base_dataset.py#L68-L93"><code class='hippogriffe-repo-url'></code></a>
+
+
+<a href="#cryospax.AbstractParticleParameterFile" class="headerlink" title="Permanent link">¤</a></h4>
+
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div></details>
+<details class="abstract">
+<summary><code>cryospax.AbstractRelionParticleParameterFile</code></summary>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="cryospax.AbstractRelionParticleParameterFile" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.AbstractRelionParticleParameterFile(<a class="autorefs autorefs-internal" href="#cryospax.AbstractParticleParameterFile">cryospax.AbstractParticleParameterFile</a>)</code>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e1056b2afb84ed92cfa8149aa4cbe492c6dc469d/cryospax/_dataset/relion.py#L132-L223"><code class='hippogriffe-repo-url'></code></a>
+
+
+<a href="#cryospax.AbstractRelionParticleParameterFile" class="headerlink" title="Permanent link">¤</a></h4>
+
+
+    <div class="doc doc-contents first">
+
+
+        <p>Abstract class for a RELION particle parameter file.</p>
+<p>This class is mostly useful for wrapping
+the <a class="autorefs autorefs-internal" href="#cryospax.RelionParticleParameterFile"><code>cryospax.RelionParticleParameterFile</code></a> into
+slightly different indexing behavior downstream.</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div></details>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="cryospax.RelionParticleParameterFile" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.RelionParticleParameterFile(<a class="autorefs autorefs-internal" href="#cryospax.AbstractRelionParticleParameterFile">cryospax.AbstractRelionParticleParameterFile</a>)</code>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e1056b2afb84ed92cfa8149aa4cbe492c6dc469d/cryospax/_dataset/relion.py#L226-L646"><code class='hippogriffe-repo-url'></code></a>
+
+
+<a href="#cryospax.RelionParticleParameterFile" class="headerlink" title="Permanent link">¤</a></h4>
+
+
+    <div class="doc doc-contents first">
+
+
+        <p>A dataset that wraps a RELION particle stack in
+<a href="https://relion.readthedocs.io/en/latest/Reference/Conventions.html">STAR</a>
+format.</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h5 id="cryospax.RelionParticleParameterFile.starfile_data" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <code class="highlight language-python"><span class="n">starfile_data</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#cryospax.RelionParticleParameterFile.starfile_data" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The <code>pandas.DataFrame</code> of STAR file entries.</p>
+
+    </div>
+
+</div>
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.RelionParticleParameterFile.__init__" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">path_to_starfile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">exists_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">selection_filter</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{})</span></code>
+  
+
+
+<a href="#cryospax.RelionParticleParameterFile.__init__" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p><strong>Arguments:</strong></p>
+<ul>
+<li><code>path_to_starfile</code>:
+    The path to the RELION STAR file. If the path does not exist
+    and <code>mode = 'w'</code>, an empty dataset will be created.</li>
+<li><code>path_to_relion_project</code>: The path to the RELION project directory.</li>
+<li><code>mode</code>:<ul>
+<li>If <code>mode = 'w'</code>, the dataset is prepared to write new
+<em>parameters</em>. This is done by storing an empty dataset in
+<code>RelionParticleParameterFile.starfile_data</code>. If a STAR file
+already exists at <code>path_to_starfile</code>, set <code>exists_ok = True</code>.</li>
+<li>If <code>mode = 'r'</code>, the STAR file at <code>path_to_starfile</code> is read
+into <code>RelionParticleParameterFile.starfile_data</code>.</li>
+</ul>
+</li>
+<li><code>exists_ok</code>:
+    If the <code>path_to_starfile</code> already exists, if <code>True</code> and <code>mode = 'w'</code>
+    nonetheless stores an empty <code>RelionParticleParameterFile.starfile_data</code>.</li>
+<li><code>selection_filter</code>:
+    A dictionary used to include only particular dataset elements.
+    The keys of this dictionary should be any data entry in the STAR
+    file, while the values should be a function that takes in a
+    column and returns a boolean mask for the column. For example,
+    filter by class using
+    <code>selection_filter["rlnClassNumber"] = lambda x: x == 0</code>.</li>
+<li><code>options</code>:
+    A dictionary of options for modifying the behavior of loading/writing.<ul>
+<li>'loads_metadata':
+    If <code>True</code>, the resulting dict loads
+    the raw metadata from the STAR file that is not otherwise included
+    into a <code>pandas.DataFrame</code>.
+    If this is set to <code>True</code>, note that dictionaries cannot pass through
+    JIT boundaries without removing the metadata.
+    By default, <code>False</code>.</li>
+<li>'broadcasts_image_config':
+    If <code>True</code>, image config parameters are broadcasted with leading dimension
+    as the number of particles.
+    By default, <code>True</code>.</li>
+<li>'loads_envelope':
+    If <code>True</code>, read in the parameters of the CTF envelope function, i.e.
+    "rlnCtfScalefactor" and "rlnCtfBfactor".
+    By default, <code>False</code>.</li>
+<li>'updates_optics_group':
+    If <code>True</code>, when re-writing STAR file entries via
+    <code>dataset[idx] = parameters</code> syntax, creates a new optics group entry.
+    By default, <code>False</code>.</li>
+<li>'rotation_convention':
+    If <code>'object'</code>, the loader loads/writes poses in the convention that
+    the rotation is of the <em>object</em>. If <code>'frame'</code>, the rotation is of
+    the frame (i.e. the rotation is inverted).
+    The pose passed to <a href="https://michael-0brien.github.io/cryojax/api/simulator/entry-point/#cryojax.simulator.make_image_model"><code>cryojax.simulator.make_image_model</code></a>
+    is always of the object, but advanced considerations may require
+    setting <code>rotation_convention = 'frame'</code> (or manually calling
+    <code>pose.to_inverse_rotation()</code>) to correctly match RELION and
+    cryoJAX conventions.
+    By default, <code>'object'</code>.</li>
+<li>'pad_options':
+    Padding options for image simulation, passed to the <code>BasicImageConfig</code>.
+    See <code>BasicImageConfig</code> for documentation.
+    By default, <code>{}</code>.</li>
+</ul>
+</li>
+</ul>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.RelionParticleParameterFile.__getitem__" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="fm">__getitem__</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">slice</span> <span class="o">|</span> <span class="n">Int</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span> <span class="o">|</span> <span class="n">Int</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span></code>
+  
+
+
+<a href="#cryospax.RelionParticleParameterFile.__getitem__" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Load STAR file entries with <code>value = parameter_file[...]</code> syntax,
+where <code>value</code> is a dictionary with keys</p>
+<ul>
+<li>'pose':
+    The <a href="https://michael-0brien.github.io/cryojax/api/simulator/pose/#cryojax.simulator.EulerAnglePose"><code>cryojax.simulator.EulerAnglePose</code></a></li>
+<li>'image_config':
+    The <a href="https://michael-0brien.github.io/cryojax/api/simulator/config/#cryojax.simulator.BasicImageConfig"><code>cryojax.simulator.BasicImageConfig</code></a></li>
+<li>'transfer_theory':
+    The <a href="https://michael-0brien.github.io/cryojax/api/simulator/transfer_theory/#cryojax.simulator.ContrastTransferTheory"><code>cryojax.simulator.ContrastTransferTheory</code></a></li>
+<li>'metadata':
+    If <code>loads_metadata = True</code>, a <code>pandas.DataFrame</code> of entries
+    <em>not</em> used when loading the <code>pose</code>, <code>image_config</code>, and
+    <code>transfer_theory</code>. Otherwise, <code>None</code>.</li>
+</ul>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.RelionParticleParameterFile.__setitem__" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="fm">__setitem__</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">slice</span> <span class="o">|</span> <span class="n">Int</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span> <span class="o">|</span> <span class="n">Int</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">],</span> <span class="n">value</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span></code>
+  
+
+
+<a href="#cryospax.RelionParticleParameterFile.__setitem__" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Set STAR file entries with <code>parameter_file[...] = value</code> syntax,
+where <code>value</code> is a dictionary with keys</p>
+<ul>
+<li>'pose': The <a href=""><code>cryojax.simulator.EulerAnglePose</code></a></li>
+<li>'image_config': The <a href=""><code>cryojax.simulator.BasicImageConfig</code></a></li>
+<li>'transfer_theory': The <a href=""><code>cryojax.simulator.ContrastTransferTheory</code></a></li>
+<li>'metadata':
+    A <code>pandas.DataFrame</code> used to write custom entries to the STAR
+    file. <code>len(metadata)</code> should be equal to the number of particles.</li>
+</ul>
+<p>All keys are optional.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.RelionParticleParameterFile.append" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span></code>
+  
+
+
+<a href="#cryospax.RelionParticleParameterFile.append" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Add an entry or entries to the STAR file with
+<code>parameter_file.append(value)</code> syntax, where <code>value</code> is
+a dictionary with keys</p>
+<ul>
+<li>'pose': The <a href=""><code>cryojax.simulator.EulerAnglePose</code></a>. This key
+   is required.</li>
+<li>'image_config': The <a href=""><code>cryojax.simulator.BasicImageConfig</code></a>. This key
+   is required.</li>
+<li>'transfer_theory': The <a href=""><code>cryojax.simulator.ContrastTransferTheory</code></a>.
+   This key is required.</li>
+<li>'metadata':
+    A <code>pandas.DataFrame</code> used to write custom entries to the STAR
+    file. <code>len(metadata)</code> should be equal to the number of particles.
+    This key is optional.</li>
+</ul>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><h3 id="datasets-parameter-and-image-manipulation">Datasets: parameter and image manipulation<a class="headerlink" href="#datasets-parameter-and-image-manipulation" title="Permanent link">¤</a></h3>
+<details class="abstract">
+<summary><code>cryospax.AbstractParticleDataset</code></summary>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="cryospax.AbstractParticleDataset" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.AbstractParticleDataset(<a class="autorefs autorefs-internal" href="#cryospax.AbstractDataset">cryospax.AbstractDataset</a>)</code>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e1056b2afb84ed92cfa8149aa4cbe492c6dc469d/cryospax/_dataset/base_dataset.py#L96-L121"><code class='hippogriffe-repo-url'></code></a>
+
+
+<a href="#cryospax.AbstractParticleDataset" class="headerlink" title="Permanent link">¤</a></h4>
+
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.AbstractParticleDataset.__getitem__" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="fm">__getitem__</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="o">~</span><span class="n">T</span></code>
+  
+
+
+<a href="#cryospax.AbstractParticleDataset.__getitem__" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.AbstractParticleDataset.__setitem__" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="fm">__setitem__</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="o">~</span><span class="n">T2</span><span class="p">)</span></code>
+  
+
+
+<a href="#cryospax.AbstractParticleDataset.__setitem__" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.AbstractParticleDataset.append" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="o">~</span><span class="n">T2</span><span class="p">)</span></code>
+  
+
+
+<a href="#cryospax.AbstractParticleDataset.append" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div></details>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="cryospax.RelionParticleDataset" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.RelionParticleDataset(<a class="autorefs autorefs-internal" href="#cryospax.AbstractParticleDataset">cryospax.AbstractParticleDataset</a>)</code>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e1056b2afb84ed92cfa8149aa4cbe492c6dc469d/cryospax/_dataset/relion.py#L649-L1010"><code class='hippogriffe-repo-url'></code></a>
+
+
+<a href="#cryospax.RelionParticleDataset" class="headerlink" title="Permanent link">¤</a></h4>
+
+
+    <div class="doc doc-contents first">
+
+
+        <p>A dataset that wraps a RELION particle stack in
+<a href="https://relion.readthedocs.io/en/latest/Reference/Conventions.html">STAR</a> format.</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.RelionParticleDataset.__init__" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">parameter_file</span><span class="p">:</span> <span class="n">cryospax</span><span class="o">.</span><span class="n">AbstractRelionParticleParameterFile</span><span class="p">,</span> <span class="n">path_to_relion_project</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mrcfile_settings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{},</span> <span class="n">loads_parameters</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span></code>
+  
+
+
+<a href="#cryospax.RelionParticleDataset.__init__" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p><strong>Arguments:</strong></p>
+<ul>
+<li><code>path_to_relion_project</code>:
+    In RELION STAR files, only a relative path is added to the
+    'rlnImageName' column. This is relative to the path to the
+    "project", which is given by this parameter.</li>
+<li><code>parameter_file</code>:
+    The <code>RelionParticleParameterFile</code>.</li>
+<li><code>mode</code>:<ul>
+<li>If <code>mode = 'w'</code>, the dataset is prepared to write new
+<em>images</em>. This is done by removing 'rlnImageName' from
+<code>parameter_file.starfile_data</code>, if it exists at all.
+does not have a column 'rlnImageName' and image files
+are not yet written.</li>
+<li>If <code>mode = 'r'</code>, images are read from the 'rlnImageName'
+stored in the <code>parameter_file.starfile_data</code>.</li>
+</ul>
+</li>
+<li><code>mrcfile_settings</code>:
+    A dictionary with the following keys:<ul>
+<li>'prefix':
+    A <code>str</code> which acts as the prefix to the filenames. If this
+    is equal to <code>"f"</code>, then the filename for image stack 0 will
+    be called "f-00000.mrcs", for <code>delimiter = '-'</code> and
+    <code>n_characters = 5</code>.
+    are of format "filenam"</li>
+<li>'output_folder':
+    A <code>str</code> or <code>pathlib.Path</code> type where to write MRC files,
+    relative to the <code>path_to_relion_project</code>.</li>
+<li>'n_characters':
+    An <code>int</code> for the number of characters to write the filename
+    number string. If this is equal to <code>5</code>, then the filename
+    for image stack 0 will be called "f-00000.mrcs", for
+    <code>delimiter = '-'</code> and <code>prefix = 'f'</code>.</li>
+<li>'delimiter':
+    A <code>str</code> for the delimiter between the filename prefix
+    and number string. If this is equal to <code>'-'</code>, then the
+    filename for image stack 0 will be called "f-00000.mrcs",
+    for <code>n_characters = 5</code> and <code>prefix = 'f'</code>.</li>
+<li>'overwrite':
+    If <code>True</code>, overwrite existing MRC file path if it exists.</li>
+</ul>
+</li>
+<li><code>loads_parameters</code>:
+    If <code>True</code>, load parameters and images. Otherwise, load only images.</li>
+</ul>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.RelionParticleDataset.__getitem__" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="fm">__getitem__</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">slice</span> <span class="o">|</span> <span class="n">Int</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span> <span class="o">|</span> <span class="n">Int</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="s1">&#39;N&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span></code>
+  
+
+
+<a href="#cryospax.RelionParticleDataset.__getitem__" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.RelionParticleDataset.__setitem__" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="fm">__setitem__</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">slice</span> <span class="o">|</span> <span class="n">Int</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">],</span> <span class="n">value</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span></code>
+  
+
+
+<a href="#cryospax.RelionParticleDataset.__setitem__" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Set dataset entries with <code>parameter_file[...] = value</code> syntax,
+where <code>value</code> is a dictionary with keys</p>
+<ul>
+<li>'images':
+    An image or image stack to write to an MRC file. This
+    key is required.</li>
+<li>'parameters':
+    See <a class="autorefs autorefs-internal" href="#cryospax.RelionParticleParameterFile"><code>cryospax.RelionParticleParameterFile</code></a> for more
+    information. This key is optional.</li>
+</ul>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.RelionParticleDataset.append" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span></code>
+  
+
+
+<a href="#cryospax.RelionParticleDataset.append" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Add an entry or entries to the dataset with
+<code>dataset.append(value)</code> syntax, where <code>value</code>
+is a dictionary with keys</p>
+<ul>
+<li>'images':
+    An image or image stack to write to the MRC file.</li>
+<li>'parameters':
+    See <a class="autorefs autorefs-internal" href="#cryospax.RelionParticleParameterFile"><code>cryospax.RelionParticleParameterFile</code></a> for more
+    information.</li>
+</ul>
+<p>Both keys are required.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="cryospax.RelionParticleDataset.write_images" class="doc doc-heading">
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="n">write_images</span><span class="p">(</span><span class="n">index_array</span><span class="p">:</span> <span class="n">Int</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">],</span> <span class="n">images</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">NDArrayLike</span><span class="p">,</span> <span class="s1">&#39;... _ _&#39;</span><span class="p">],</span> <span class="n">parameters</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span></code>
+  
+
+
+<a href="#cryospax.RelionParticleDataset.write_images" class="headerlink" title="Permanent link">¤</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Write images to the dataset given <code>images</code> and <code>parameters</code>.</p>
+<p>This function is wrapped by <a class="autorefs autorefs-internal" href="#cryospax.RelionParticleDataset.append"><code>cryospax.RelionParticleDataset.append</code></a>
+and <a class="autorefs autorefs-internal" href="#cryospax.RelionParticleDataset.__setitem__"><code>cryospax.RelionParticleDataset.__setitem__</code></a> and in most cases
+these APIs are preferred.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "toc.integrate"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c8b220af.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
