@@ -1,4 +1,4 @@
-# Cryo-EM dataset manipulation in RELION and cryoSPARC
+# Cryo-EM dataset manipulation
 
 CryoSPAX implements interfaces for reading/writing to common cryo-EM software frameworks, such as RELION and cryoSPARC.
 
