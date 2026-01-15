@@ -26,7 +26,7 @@
     
     
       
-        <title>Simulate particle stacks - Cryo-EM single particle analysis in JAX</title>
+        <title>Simulate particle stacks - Single particle analysis tools for cryoJAX</title>
       
     
     
@@ -90,7 +90,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Cryo-EM single particle analysis in JAX" class="md-header__button md-logo" aria-label="Cryo-EM single particle analysis in JAX" data-md-component="logo">
+    <a href="../.." title="Single particle analysis tools for cryoJAX" class="md-header__button md-logo" aria-label="Single particle analysis tools for cryoJAX" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m20.79 13.95-2.33.62-2-1.13v-2.88l2-1.13 2.33.62.52-1.93-1.77-.47.46-1.77-1.93-.52-.62 2.33-2 1.13L13 7.38V5.12l1.71-1.71L13.29 2 12 3.29 10.71 2 9.29 3.41 11 5.12v2.26L8.5 8.82l-2-1.13-.58-2.33L4 5.88l.47 1.77-1.77.47.52 1.93 2.33-.62 2 1.13v2.89l-2 1.13-2.33-.62-.52 1.93 1.77.47L4 18.12l1.93.52.62-2.33 2-1.13L11 16.62v2.26l-1.71 1.71L10.71 22 12 20.71 13.29 22l1.41-1.41-1.7-1.71v-2.26l2.5-1.45 2 1.13.62 2.33 1.88-.51-.47-1.77 1.77-.47zM9.5 10.56 12 9.11l2.5 1.45v2.88L12 14.89l-2.5-1.45z"/></svg>
@@ -104,7 +104,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            Cryo-EM single particle analysis in JAX
+            Single particle analysis tools for cryoJAX
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -279,13 +279,13 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Cryo-EM single particle analysis in JAX" class="md-nav__button md-logo" aria-label="Cryo-EM single particle analysis in JAX" data-md-component="logo">
+    <a href="../.." title="Single particle analysis tools for cryoJAX" class="md-nav__button md-logo" aria-label="Single particle analysis tools for cryoJAX" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m20.79 13.95-2.33.62-2-1.13v-2.88l2-1.13 2.33.62.52-1.93-1.77-.47.46-1.77-1.93-.52-.62 2.33-2 1.13L13 7.38V5.12l1.71-1.71L13.29 2 12 3.29 10.71 2 9.29 3.41 11 5.12v2.26L8.5 8.82l-2-1.13-.58-2.33L4 5.88l.47 1.77-1.77.47.52 1.93 2.33-.62 2 1.13v2.89l-2 1.13-2.33-.62-.52 1.93 1.77.47L4 18.12l1.93.52.62-2.33 2-1.13L11 16.62v2.26l-1.71 1.71L10.71 22 12 20.71 13.29 22l1.41-1.41-1.7-1.71v-2.26l2.5-1.45 2 1.13.62 2.33 1.88-.51-.47-1.77 1.77-.47zM9.5 10.56 12 9.11l2.5 1.45v2.88L12 14.89l-2.5-1.45z"/></svg>
 
     </a>
-    Cryo-EM single particle analysis in JAX
+    Single particle analysis tools for cryoJAX
   </label>
   
     <div class="md-nav__source">
@@ -645,7 +645,7 @@
 
 <h4 id="cryospax.simulate_particle_stack" class="doc doc-heading">
   <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">cryospax</span><span class="o">.</span><span class="n">simulate_particle_stack</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">cryospax</span><span class="o">.</span><span class="n">AbstractParticleDataset</span><span class="p">,</span> <span class="n">simulate_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">PyTree</span><span class="p">,</span> <span class="o">~</span><span class="n">ConstantT</span><span class="p">,</span> <span class="o">~</span><span class="n">PerParticleT</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="s1">&#39;_ _&#39;</span><span class="p">]],</span> <span class="n">constant_args</span><span class="p">:</span> <span class="o">~</span><span class="n">ConstantT</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">per_particle_args</span><span class="p">:</span> <span class="o">~</span><span class="n">PerParticleT</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">images_per_file</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span></code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/e6ea2524ca7ad1675b7e0559f252dbf381a00f28/cryospax/_simulate_particles.py#L18-L214"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/a5d36375a8e9ed2970b6ac1fb26d46c5874a4c94/cryospax/_simulate_particles.py#L18-L214"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.simulate_particle_stack" class="headerlink" title="Permanent link">¤</a></h4>
