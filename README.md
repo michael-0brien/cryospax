@@ -1,7 +1,7 @@
 <h1 align='center'>A small library for cryo-EM single particle analysis in JAX</h1>
 
 [![Continuous Integration](https://github.com/michael-0brien/cryospax/actions/workflows/ci_build.yml/badge.svg)](https://github.com/michael-0brien/cryospax/actions/workflows/ci_build.yml?branch=dev)
-[![codecov](https://codecov.io/gh/michael-0brien/cryospax/branch/dev/graph/badge.svg)](https://codecov.io/gh/michael-0brien/cryospax)
+[![codecov](https://codecov.io/gh/michael-0brien/cryospax/graph/badge.svg?token=BAYZQFY5FH)](https://codecov.io/gh/michael-0brien/cryospax)
 
 CryoSPAX is a *small* library built to support building [cryoJAX](https://github.com/michael-0brien/cryojax) applications for single-particle analysis (SPA) and deploying them at scale.
 
@@ -24,7 +24,7 @@ git clone https://github.com/michael-0brien/cryospax
 cd cryospax
 git checkout dev
 uv pip install -e '.[dev,tests]'
-uv run precommit install
+uv run pre-commit install
 ```
 
 ## Acknowledgements

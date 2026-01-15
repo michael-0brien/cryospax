@@ -1,3 +1,7 @@
+# Target dev branch
+codecov:
+  branch: dev
+
 # Disable PR comments
 comment: false
 
