@@ -1,7 +1,5 @@
 # Overview
 
-CryoSPAX is built to support applications of [cryoJAX](https://github.com/michael-0brien/cryojax) for building cryo-EM single particle analysis workflows and algorithms---and deploying them at scale. It is a *small package* that seeks to simplify new cryo-EM research; it does not provide end-to-end single particle analysis workflows.
-
 ## What does cryoSPAX implement?
 
 ### Cryo-EM dataset manipulation
