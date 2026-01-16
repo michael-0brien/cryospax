@@ -10,7 +10,17 @@ import starfile
 
 
 def read_starfile(filename: str | pathlib.Path, **kwargs: Any) -> dict[str, pd.DataFrame]:
-    """Read a STAR file, safely."""
+    """Read a STAR file using
+    [`starfile`](https://github.com/teamtomo/starfile).
+
+    **Arguments:**
+
+    - `filename`:
+        The path where to read the STAR file. This must include
+        a '.star' extension.
+
+    Keyword arguments are passed to `starfile.read`.
+    """
     # Make sure filename is valid starfile
     _validate_filename(filename, mode="r")
     # Read starfile
@@ -20,7 +30,20 @@ def read_starfile(filename: str | pathlib.Path, **kwargs: Any) -> dict[str, pd.D
 
 
 def write_starfile(starfile_data, filename: str | pathlib.Path, **kwargs: Any):
-    """Write a STAR file, safely."""
+    """Write a STAR file using
+    [`starfile`](https://github.com/teamtomo/starfile).
+
+    **Arguments:**
+
+    - `starfile_data`:
+        A dictionary whose keys are strings and whose entries are
+        `pandas.DataFrame`s.
+    - `filename`:
+        The path where to write the STAR file. This must include
+        a '.star' extension.
+
+    Keyword arguments are passed to `starfile.write`.
+    """
     # Make sure filename is valid starfile
     _validate_filename(filename, mode="w")
     # Write starfile

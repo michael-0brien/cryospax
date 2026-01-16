@@ -164,7 +164,7 @@ def simulate_particle_stack(
         set this as the number of particles in the dataset.
     - `kwargs`:
         Keyword arguments passed to
-        `AbstractParticleDataset.parameter_file.save`.
+        [`cryospax.AbstractParticleParameterFile.save`][]
     """
     if dataset.mode == "r":
         raise ValueError(
