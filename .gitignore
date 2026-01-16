@@ -4,6 +4,7 @@ docs/examples/outputs/
 tests/outputs/
 .venv/
 .vscode/
+*_cache/
 .DS_STORE
 *.swp
 *_version.py
