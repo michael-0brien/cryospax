@@ -3,7 +3,8 @@
 import abc
 import pathlib
 from copy import deepcopy
-from typing import Generic, Literal, Self, TypeVar
+from typing import Generic, Literal, TypeVar
+from typing_extensions import Self
 
 import numpy as np
 from cryojax.jax_util import NDArrayLike
