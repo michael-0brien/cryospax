@@ -53,13 +53,13 @@ def simulate_particle_stack(
 
     ```python
     import cryojax.simulator as cxs
-    import cryospax as spa
+    import cryospax as spx
     import jax
     from jaxtyping import PyTree
 
     # Load a `RelionParticleDataset` object. This loads
     # parameters and writes images
-    dataset = spa.RelionParticleDataset(..., mode='w')
+    dataset = spx.RelionParticleDataset(..., mode='w')
 
     # Write your `simulate_fn` function, building an
     # `AbstractImageModel` (see tutorials for details)
@@ -79,7 +79,7 @@ def simulate_particle_stack(
         return image_model.simulate()
 
     # Simulate images and write to disk
-    spa.simulate_particle_stack(
+    spx.simulate_particle_stack(
         dataset,
         simulate_fn,
         constant_args=(...)
@@ -94,13 +94,13 @@ def simulate_particle_stack(
 
     ```python
     import cryojax.simulator as cxs
-    import cryospax as spa
+    import cryospax as spx
     import jax
     from jaxtyping import Array, PyTree, Shaped
 
     # Load a `RelionParticleDataset` object. This loads
     # parameters and writes images
-    dataset = spa.RelionParticleDataset(..., mode='w')
+    dataset = spx.RelionParticleDataset(..., mode='w')
 
     # Instantiate per-particle arguments. First, the RNG keys used
     # to generate the noise
@@ -130,7 +130,7 @@ def simulate_particle_stack(
 
         return scale * distribution.sample(key)
 
-    spa.simulate_particle_stack(
+    spx.simulate_particle_stack(
         dataset,
         simulate_fn,
         constant_args=(...)
@@ -164,7 +164,7 @@ def simulate_particle_stack(
         set this as the number of particles in the dataset.
     - `kwargs`:
         Keyword arguments passed to
-        `AbstractParticleDataset.parameter_file.save`.
+        [`cryospax.AbstractParticleParameterFile.save`][]
     """
     if dataset.mode == "r":
         raise ValueError(

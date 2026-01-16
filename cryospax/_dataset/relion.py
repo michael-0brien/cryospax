@@ -6,9 +6,8 @@ import re
 import typing
 import warnings
 from collections.abc import Callable
-from copy import deepcopy
 from typing import Any, Literal, TypedDict, cast
-from typing_extensions import Self, override
+from typing_extensions import override
 
 import equinox as eqx
 import jax
@@ -219,9 +218,6 @@ class AbstractRelionParticleParameterFile(
     def rotation_convention(self, value: Literal["object", "frame"]):
         raise NotImplementedError
 
-    def copy(self) -> Self:
-        return deepcopy(self)
-
 
 class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     """A dataset that wraps a RELION particle stack in
@@ -311,7 +307,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         self, index: int | slice | Int[np.ndarray, ""] | Int[np.ndarray, " _"]
     ) -> _ParticleParameterInfo:
         """Load STAR file entries with `value = parameter_file[...]` syntax,
-        where `value` is a dictionary with keys
+        where `value` is a dictionary with keys:
 
         - 'pose':
             The [`cryojax.simulator.EulerAnglePose`](https://michael-0brien.github.io/cryojax/api/simulator/pose/#cryojax.simulator.EulerAnglePose)
@@ -377,7 +373,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         value: _ParticleParameterLike,
     ):
         """Set STAR file entries with `parameter_file[...] = value` syntax,
-        where `value` is a dictionary with keys
+        where `value` is a dictionary with keys:
 
         - 'pose': The [`cryojax.simulator.EulerAnglePose`]()
         - 'image_config': The [`cryojax.simulator.BasicImageConfig`]()
@@ -430,7 +426,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     def append(self, value: _ParticleParameterLike):
         """Add an entry or entries to the STAR file with
         `parameter_file.append(value)` syntax, where `value` is
-        a dictionary with keys
+        a dictionary with keys:
 
         - 'pose': The [`cryojax.simulator.EulerAnglePose`](). This key
            is required.
@@ -497,7 +493,20 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     @property
     @override
     def path_to_starfile(self) -> pathlib.Path:
-        """The STAR file path"""
+        """The path to the STAR file. This is an alias to
+        `parameter_file.path_to_output`.
+
+        !!! example "Modify and write a new STAR file"
+            ```python
+            parameter_file = RelionParticleParameterFile(
+                path_to_starfile="./path/to/particles.star", mode="r"
+            )
+            updated_parameters = ...
+            parameter_file[...] = updated_parameters
+            parameter_file.path_to_starfile = "./path/to/new/particles.star"
+            parameter_file.save()
+            ```
+        """
         return self._path_to_starfile
 
     @path_to_starfile.setter
@@ -509,6 +518,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     def mode(self) -> Literal["r", "w"]:
         """Whether or not the `parameter_file` was
         instantiated in reading ('r') or writing ('w') mode.
+
+        This cannot be modified after initialization.
         """
         return self._mode  # type: ignore
 
@@ -754,6 +765,16 @@ class RelionParticleDataset(
     def __getitem__(
         self, index: int | slice | Int[np.ndarray, ""] | Int[np.ndarray, " N"]
     ) -> _ParticleStackInfo:
+        """Load dataset with `value = dataset[...]` syntax,
+        where `value` is a dictionary with keys:
+
+        - 'images':
+            An image or image stack to write to an MRC file. This
+            key is required.
+        - 'parameters':
+            See [`cryospax.RelionParticleParameterFile`][] for more
+            information. This key is optional.
+        """  # noqa: E501
         if self.loads_parameters:
             # Load images and parameters. First, read parameters
             # and metadata from the STAR file
@@ -818,8 +839,8 @@ class RelionParticleDataset(
     def __setitem__(
         self, index: int | slice | Int[np.ndarray, ""], value: _ParticleStackLike
     ):
-        """Set dataset entries with `parameter_file[...] = value` syntax,
-        where `value` is a dictionary with keys
+        """Set dataset entries with `dataset[...] = value` syntax,
+        where `value` is a dictionary with keys:
 
         - 'images':
             An image or image stack to write to an MRC file. This
@@ -850,7 +871,7 @@ class RelionParticleDataset(
     def append(self, value: _ParticleStackLike):
         """Add an entry or entries to the dataset with
         `dataset.append(value)` syntax, where `value`
-        is a dictionary with keys
+        is a dictionary with keys:
 
         - 'images':
             An image or image stack to write to the MRC file.
@@ -969,21 +990,37 @@ class RelionParticleDataset(
     @property
     @override
     def parameter_file(self) -> AbstractRelionParticleParameterFile:
+        """The `parameter_file` that reads/writes from the STAR
+        file. This is modified internally during calls to
+        `dataset[...] = value`.
+
+        This cannot be modified after initialization.
+        """
         return self._parameter_file
 
     @property
     @override
     def mode(self) -> Literal["r", "w"]:
+        """Whether or not the `dataset` was
+        instantiated in reading ('r') or writing ('w') mode.
+
+        This cannot be modified after initialization.
+        """
         return self._mode  # type: ignore
 
     @property
     def path_to_relion_project(self) -> pathlib.Path:
+        """The path to the RELION project. Paths in the
+        STAR file are relative to this directory.
+
+        This cannot be modified after initialization.
+        """
         return self._path_to_relion_project
 
     @property
     def mrcfile_settings(self) -> _MrcfileSettings:
         """Settings for writing MRC files with. See
-        [`cryojax.RelionParticleDataset.__init__`][]
+        [`cryospax.RelionParticleDataset.__init__`][]
         for more information.
         """
         return self._mrcfile_settings

@@ -2,7 +2,9 @@
 
 import abc
 import pathlib
+from copy import deepcopy
 from typing import Generic, Literal, TypeVar
+from typing_extensions import Self
 
 import numpy as np
 from cryojax.jax_util import NDArrayLike
@@ -51,8 +53,8 @@ class AbstractDataset(abc.ABC, Generic[T]):
         classes in `cryojax`, which are `equinox.Module`s.
         An `equinox.Module` is just a pytree, so it can be safely
         passed to `jax` transformations. However, an `AbstractDataset`
-        can *not* be passed to `jax` transformations. Therefore, it is
-        not a pytree. Rather, it is a normal python class.
+        can *not* be passed to `jax` transformations. It is
+        a normal python class, not a pytree.
 
     """
 
@@ -66,6 +68,8 @@ class AbstractDataset(abc.ABC, Generic[T]):
 
 
 class AbstractParticleParameterFile(AbstractDataset[T1], Generic[T1, T2]):
+    """Base class for a particle parameter file."""
+
     @abc.abstractmethod
     def __setitem__(self, index, value: T2):
         raise NotImplementedError
@@ -92,8 +96,18 @@ class AbstractParticleParameterFile(AbstractDataset[T1], Generic[T1, T2]):
     def mode(self) -> Literal["r", "w"]:
         raise NotImplementedError
 
+    def copy(self) -> Self:
+        """Make a deep copy of the `parameter_file`. This is
+        often useful when modifying via `parameter_file[...] = value`
+        syntax and it is necessary to maintain a copy of the original
+        data.
+        """
+        return deepcopy(self)
+
 
 class AbstractParticleDataset(AbstractDataset[T1], Generic[T1, T2]):
+    """Base class for a particle dataset."""
+
     @property
     @abc.abstractmethod
     def parameter_file(self) -> AbstractParticleParameterFile:

@@ -1,6 +1,6 @@
 # Welcome to cryoSPAX!
 
-CryoSPAX is a *small* library built to support [cryoJAX](https://github.com/michael-0brien/cryojax) projects that implement cryo-EM single-particle analysis (SPA) at scale. It seeks to simplify new cryo-EM research, rather than providing end-to-end single particle analysis workflows.
+CryoSPAX is a *small* library built to support [cryoJAX](https://github.com/michael-0brien/cryojax) projects that implement single-particle analysis (SPA) at scale. It seeks to simplify new cryo-EM research, rather than providing end-to-end single particle analysis workflows.
 
 ## Installation
 

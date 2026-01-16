@@ -7,32 +7,65 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
         options:
             members:
                 - __init__
+                - __len__
                 - __getitem__
 
-### Reading/writing parameter files (e.g. STAR files)
+## Reading/writing parameter files (e.g. STAR files)
 
 ??? abstract "`cryospax.AbstractParticleParameterFile`"
     ::: cryospax.AbstractParticleParameterFile
         options:
             members:
                 - __init__
+                - __getitem__
+                - __setitem__
+                - __len__
+                - append
+                - save
+                - path_to_output
+                - mode
 
 ??? abstract "`cryospax.AbstractRelionParticleParameterFile`"
     ::: cryospax.AbstractRelionParticleParameterFile
         options:
+            group_by_category: false
             members:
                 - __init__
+                - __getitem__
+                - __setitem__
+                - __len__
+                - append
+                - save
+                - path_to_starfile
+                - starfile_data
+                - loads_metadata
+                - loads_envelope
+                - broadcasts_image_config
+                - updates_optics_group
+                - rotation_convention
 
 ::: cryospax.RelionParticleParameterFile
     options:
+        group_by_category: false
         members:
             - __init__
             - __getitem__
             - __setitem__
+            - __len__
             - append
+            - copy
+            - save
             - starfile_data
+            - path_to_starfile
+            - path_to_output
+            - mode
+            - loads_metadata
+            - loads_envelope
+            - broadcasts_image_config
+            - updates_optics_group
+            - rotation_convention
 
-### Datasets: parameter and image manipulation
+## Datasets: parameter and image manipulation
 
 ??? abstract "`cryospax.AbstractParticleDataset`"
     ::: cryospax.AbstractParticleDataset
@@ -41,13 +74,29 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
                 - __init__
                 - __getitem__
                 - __setitem__
+                - __len__
                 - append
+                - parameter_file
+                - write_images
+                - mode
 
 ::: cryospax.RelionParticleDataset
     options:
+        group_by_category: false
         members:
             - __init__
             - __getitem__
             - __setitem__
+            - __len__
             - append
             - write_images
+            - parameter_file
+            - path_to_relion_project
+            - mrcfile_settings
+            - loads_parameters
+
+## Basic I/O
+
+::: cryospax.read_starfile
+
+::: cryospax.write_starfile
