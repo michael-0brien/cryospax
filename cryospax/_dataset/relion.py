@@ -568,7 +568,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         ```
 
         The `metadata` is a `pandas.DataFrame` that includes the
-        information of
+        the STAR file rows *not* loaded by the `parameter_file`.
+        For example, 'rlnClassNumber'.
         """
         return self._options["loads_metadata"]
 
@@ -680,7 +681,7 @@ class RelionParticleDataset(
             'rlnImageName' column. This is relative to the path to the
             "project", which is given by this parameter.
         - `parameter_file`:
-            The `RelionParticleParameterFile`.
+            The [`cryospax.RelionParticleParameterFile`][].
         - `mode`:
             - If `mode = 'w'`, the dataset is prepared to write new
             *images*. This is done by removing 'rlnImageName' from
