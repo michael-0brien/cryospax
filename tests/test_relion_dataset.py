@@ -917,7 +917,6 @@ def test_write_starfile_different_envs():
             "image_config": image_config,
             "pose": pose,
             "transfer_theory": transfer_theory,
-            "metadata": None,
         }
 
     particle_params = _make_particle_params(im.FourierGaussian())
@@ -1093,7 +1092,6 @@ def test_append_relion_stack_dataset():
             "image_config": image_config,
             "pose": pose,
             "transfer_theory": transfer_theory,
-            "metadata": None,
         }
 
     def _mock_compute_image(particle_parameters, constant_args, per_particle_args):

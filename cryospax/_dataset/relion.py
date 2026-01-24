@@ -6,7 +6,7 @@ import re
 import typing
 import warnings
 from collections.abc import Callable
-from typing import Any, Literal, TypedDict, cast
+from typing import Any, Literal, TypedDict
 from typing_extensions import NotRequired, override
 
 import equinox as eqx
@@ -318,7 +318,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         - 'metadata':
             If `loads_metadata = True`, a `pandas.DataFrame` of entries
             *not* used when loading the `pose`, `image_config`, and
-            `transfer_theory`. Otherwise, `None`.
+            `transfer_theory` (e.g. the 'rlnClassNumber'). Otherwise, this
+            key is not included.
         """  # noqa: E501
         # Validate index
         n_rows = self.starfile_data["particles"].shape[0]
@@ -771,7 +772,8 @@ class RelionParticleDataset(
             key is required.
         - 'parameters':
             See [`cryospax.RelionParticleParameterFile`][] for more
-            information. This key is optional.
+            information. This key is not included if
+            `just_images = True`.
         """  # noqa: E501
         if not self.just_images:
             # Load images and parameters. First, read parameters
@@ -781,7 +783,6 @@ class RelionParticleDataset(
             # ... read parameters
             parameters = self.parameter_file[index]
             # ... validate the metadata
-            assert "metadata" in parameters
             particle_data_at_index = parameters["metadata"]
             _validate_rln_image_name_exists(particle_data_at_index, index)
             # ... reset boolean to original value
@@ -1746,20 +1747,19 @@ def _parameters_to_particle_data(
     # Finally, see if the particle parameters has metadata and if so,
     # add this
     if "metadata" in parameters:
-        if parameters["metadata"] is not None:
-            metadata = cast(pd.DataFrame, parameters["metadata"])
-            if n_particles != metadata.index.size:
-                raise ValueError(
-                    "When adding custom metadata to STAR file "
-                    "with `parameter_file[index] = foo` or `parameter_file.append(foo)`, "
-                    "found the number of particles "
-                    "in `foo['metadata']` was inconsistent with the "
-                    "number of particles in `foo['pose']`."
-                )
-            # Add metadata to dataframe
-            particle_data = pd.concat(
-                [particle_data, metadata], axis="columns", verify_integrity=True
+        metadata = parameters["metadata"]
+        if n_particles != metadata.index.size:
+            raise ValueError(
+                "When adding custom metadata to STAR file "
+                "with `parameter_file[index] = foo` or `parameter_file.append(foo)`, "
+                "found the number of particles "
+                "in `foo['metadata']` was inconsistent with the "
+                "number of particles in `foo['pose']`."
             )
+        # Add metadata to dataframe
+        particle_data = pd.concat(
+            [particle_data, metadata], axis="columns", verify_integrity=True
+        )
     return particle_data
 
 
