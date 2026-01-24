@@ -7,7 +7,7 @@ import typing
 import warnings
 from collections.abc import Callable
 from typing import Any, Literal, TypedDict, cast
-from typing_extensions import override
+from typing_extensions import NotRequired, override
 
 import equinox as eqx
 import jax
@@ -96,13 +96,13 @@ else:
         pose: EulerAnglePose
         transfer_theory: ContrastTransferTheory
 
-        metadata: pd.DataFrame | None
+        metadata: NotRequired[pd.DataFrame]
 
     class _ParticleStackInfo(TypedDict):
         """Particle stack info from RELION."""
 
-        parameters: _ParticleParameterInfo | None
         images: Float[np.ndarray, "... y_dim x_dim"]
+        parameters: NotRequired[_ParticleParameterInfo]
 
     _ParticleParameterLike = dict[str, Any] | _ParticleParameterInfo
     _ParticleStackLike = dict[str, Any] | _ParticleStackInfo
@@ -230,7 +230,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         path_to_starfile: str | pathlib.Path,
         mode: Literal["r", "w"] = "r",
         *,
-        exists_ok: bool = False,
+        exist_ok: bool = False,
         selection_filter: dict[str, Callable] | None = None,
         options: dict[str, Any] = {},
     ):
@@ -244,10 +244,10 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             - If `mode = 'w'`, the dataset is prepared to write new
             *parameters*. This is done by storing an empty dataset in
             `RelionParticleParameterFile.starfile_data`. If a STAR file
-            already exists at `path_to_starfile`, set `exists_ok = True`.
+            already exists at `path_to_starfile`, set `exist_ok = True`.
             - If `mode = 'r'`, the STAR file at `path_to_starfile` is read
             into `RelionParticleParameterFile.starfile_data`.
-        - `exists_ok`:
+        - `exist_ok`:
             If the `path_to_starfile` already exists, if `True` and `mode = 'w'`
             nonetheless stores an empty `RelionParticleParameterFile.starfile_data`.
         - `selection_filter`:
@@ -299,7 +299,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         # The STAR file data
         self._path_to_starfile = pathlib.Path(path_to_starfile)
         self._starfile_data = _load_starfile_data(
-            self._path_to_starfile, selection_filter, mode, exists_ok
+            self._path_to_starfile, selection_filter, mode, exist_ok
         )
 
     @override
@@ -340,6 +340,9 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             self._options["pad_options"],
             self.rotation_convention,
         )
+        parameter_info = _ParticleParameterInfo(
+            image_config=image_config, pose=pose, transfer_theory=transfer_theory
+        )
         if self.loads_metadata:
             # ... convert to dataframe for serialization
             if isinstance(particle_data_at_index, pd.Series):
@@ -351,15 +354,9 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                 column for column in columns if column in redundant_entry_labels
             ]
             metadata = particle_data_at_index.drop(remove_columns, axis="columns")
-        else:
-            metadata = None
+            parameter_info["metadata"] = metadata
 
-        return _ParticleParameterInfo(
-            image_config=image_config,
-            pose=pose,
-            transfer_theory=transfer_theory,
-            metadata=metadata,
-        )
+        return parameter_info
 
     @override
     def __len__(self) -> int:
@@ -564,11 +561,12 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
 
         ```python
         parameter_info = parameter_file[index]
-        assert isinstance(parameter["metadata"], pandas.DataFrame)
+        assert "metadata" in parameter_info  # True
         ```
 
         The `metadata` is a `pandas.DataFrame` that includes the
-        information of
+        the STAR file rows *not* loaded by the `parameter_file`.
+        For example, 'rlnClassNumber'.
         """
         return self._options["loads_metadata"]
 
@@ -584,7 +582,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
 
         ```python
         parameter_info = parameter_file[index]
-        assert parameter["transfer_theory"].envelope is not None  # True
+        assert parameter_info["transfer_theory"].envelope is not None  # True
         ```
         """
         return self._options["loads_envelope"]
@@ -671,7 +669,7 @@ class RelionParticleDataset(
         mode: Literal["r", "w"] = "r",
         *,
         mrcfile_settings: dict[str, Any] = {},
-        loads_parameters: bool = True,
+        just_images: bool = False,
     ):
         """**Arguments:**
 
@@ -680,7 +678,7 @@ class RelionParticleDataset(
             'rlnImageName' column. This is relative to the path to the
             "project", which is given by this parameter.
         - `parameter_file`:
-            The `RelionParticleParameterFile`.
+            The [`cryospax.RelionParticleParameterFile`][].
         - `mode`:
             - If `mode = 'w'`, the dataset is prepared to write new
             *images*. This is done by removing 'rlnImageName' from
@@ -712,8 +710,8 @@ class RelionParticleDataset(
                 for `n_characters = 5` and `prefix = 'f'`.
             - 'overwrite':
                 If `True`, overwrite existing MRC file path if it exists.
-        - `loads_parameters`:
-            If `True`, load parameters and images. Otherwise, load only images.
+        - `just_images`:
+            If `False`, load parameters and images. Otherwise, load only images.
         """
         # Set properties. First, core properties of the dataset, starting
         # with the `mode``
@@ -729,7 +727,7 @@ class RelionParticleDataset(
         # ... properties common to reading and writing images
         self._path_to_relion_project = pathlib.Path(path_to_relion_project)
         # ... properties for reading images
-        self._loads_parameters = loads_parameters
+        self._just_images = just_images
         # ... properties for writing images
         self._mrcfile_settings = _dict_to_mrcfile_settings(mrcfile_settings)
         # Now, initialize for `mode = 'r'` vs `mode = 'w'`
@@ -775,7 +773,7 @@ class RelionParticleDataset(
             See [`cryospax.RelionParticleParameterFile`][] for more
             information. This key is optional.
         """  # noqa: E501
-        if self.loads_parameters:
+        if not self.just_images:
             # Load images and parameters. First, read parameters
             # and metadata from the STAR file
             loads_metadata = self.parameter_file.loads_metadata
@@ -783,12 +781,13 @@ class RelionParticleDataset(
             # ... read parameters
             parameters = self.parameter_file[index]
             # ... validate the metadata
-            particle_data_at_index = cast(pd.DataFrame, parameters["metadata"])
+            assert "metadata" in parameters
+            particle_data_at_index = parameters["metadata"]
             _validate_rln_image_name_exists(particle_data_at_index, index)
             # ... reset boolean to original value
             self.parameter_file.loads_metadata = loads_metadata
             if not loads_metadata:
-                parameters["metadata"] = None
+                del parameters["metadata"]
             # ... grab shape
             shape = parameters["image_config"].shape
             # ... load stack of images
@@ -828,7 +827,7 @@ class RelionParticleDataset(
             ):
                 images = np.squeeze(images)
 
-            return _ParticleStackInfo(parameters=None, images=images)
+            return _ParticleStackInfo(images=images)
 
     @override
     def __len__(self) -> int:
@@ -1030,28 +1029,29 @@ class RelionParticleDataset(
         self._mrcfile_settings = _dict_to_mrcfile_settings(value)
 
     @property
-    def loads_parameters(self) -> bool:
-        """If `False`, load images and *not* parameters. This gives
+    def just_images(self) -> bool:
+        """If `True`, load images and *not* parameters. This gives
         better performance when it is not necessary to load parameters.
 
         ```python
-        dataset.loads_parameters = False
+        dataset.just_images = True
         particle_info = dataset[0]
-        assert particle_info["parameters"] is None  # True
+        assert "images" in particle_info  # True
+        assert "parameters" not in particle_info  # True
         ```
         """
-        return self._loads_parameters
+        return self._just_images
 
-    @loads_parameters.setter
-    def loads_parameters(self, value: bool):
-        self._loads_parameters = value
+    @just_images.setter
+    def just_images(self, value: bool):
+        self._just_images = value
 
 
 def _load_starfile_data(
     path_to_starfile: pathlib.Path,
     selection_filter: dict[str, Callable] | None,
     mode: Literal["r", "w"],
-    exists_ok: bool,
+    exist_ok: bool,
 ) -> _StarfileData:
     if mode == "r":
         if path_to_starfile.exists():
@@ -1065,12 +1065,12 @@ def _load_starfile_data(
                 "exist. To write a new STAR file, set `mode = 'w'`."
             )
     else:
-        if path_to_starfile.exists() and not exists_ok:
+        if path_to_starfile.exists() and not exist_ok:
             raise FileExistsError(
                 f"Set `mode = 'w'`, but STAR file {str(path_to_starfile)} already "
                 "exists. To read an existing STAR file, set `mode = 'r'` or "
                 "to erase an existing STAR file, set `mode = 'w'` and "
-                "`exists_ok=True`."
+                "`exist_ok=True`."
             )
         else:
             if selection_filter is None:

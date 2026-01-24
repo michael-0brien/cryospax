@@ -21,7 +21,7 @@ git clone https://github.com/michael-0brien/cryospax
 cd cryospax
 git checkout dev
 uv pip install -e '.[dev,tests]'
-uv run precommit install
+uv run pre-commit install
 ```
 
 ## Acknowledgements
