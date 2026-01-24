@@ -446,9 +446,7 @@ def test_load_starfile_vs_mrcs_shape(sample_starfile_path, sample_relion_project
             loads_envelope=False, loads_metadata=False, broadcasts_image_config=False
         ),
     )
-    dataset = RelionParticleDataset(
-        parameter_file, sample_relion_project_path, loads_parameters=True
-    )
+    dataset = RelionParticleDataset(parameter_file, sample_relion_project_path)
 
     particle_stack = dataset[:]
     parameters = particle_stack["parameters"]
@@ -475,14 +473,12 @@ def test_load_starfile_vs_mrcs_shape(sample_starfile_path, sample_relion_project
 def test_no_load_parameters(sample_starfile_path, sample_relion_project_path):
     """Test loading a starfile with mrcs."""
     parameter_file = RelionParticleParameterFile(path_to_starfile=sample_starfile_path)
-    dataset = RelionParticleDataset(
-        parameter_file, sample_relion_project_path, loads_parameters=True
-    )
+    dataset = RelionParticleDataset(parameter_file, sample_relion_project_path)
 
     # For particle stack with leading dim
-    dataset.loads_parameters = True
+    dataset.only_images = False
     particle_stack_params = dataset[:]
-    dataset.loads_parameters = False
+    dataset.only_images = True
     particle_stack_noparams = dataset[:]
 
     assert particle_stack_noparams["parameters"] is None
@@ -492,9 +488,9 @@ def test_no_load_parameters(sample_starfile_path, sample_relion_project_path):
     assert isinstance(particle_stack_params["images"], np.ndarray)
 
     # For particle stack with no leading dim
-    dataset.loads_parameters = True
+    dataset.only_images = False
     particle_stack_params = dataset[0]
-    dataset.loads_parameters = False
+    dataset.only_images = True
     particle_stack_noparams = dataset[0]
     assert (
         particle_stack_params["images"].shape == particle_stack_noparams["images"].shape
@@ -560,7 +556,7 @@ def test_append_particle_parameters(index, loads_envelope):
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=path_to_starfile,
         mode="w",
-        exists_ok=True,
+        exist_ok=True,
         options=dict(loads_envelope=loads_envelope, loads_metadata=False),
     )
     parameter_file.append(particle_params)
@@ -682,17 +678,17 @@ def test_file_exists_error():
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=path_to_starfile,
         mode="w",
-        exists_ok=True,
+        exist_ok=True,
     )
     parameter_file.append(parameters)
     parameter_file.save(overwrite=True)
 
-    # Test no exists_ok
+    # Test no exist_ok
     with pytest.raises(FileExistsError):
         _ = RelionParticleParameterFile(
             path_to_starfile=path_to_starfile,
             mode="w",
-            exists_ok=False,
+            exist_ok=False,
         )
     # Clean up
     shutil.rmtree(parameter_file.path_to_output.parent)
@@ -701,7 +697,7 @@ def test_file_exists_error():
 def test_file_not_found_error():
     dummy_path_to_starfile = "path/to/nonexistant/dir/nonexistant_file.star"
 
-    # Test no exists_ok
+    # Test no exist_ok
     with pytest.raises(FileNotFoundError):
         _ = RelionParticleParameterFile(
             path_to_starfile=dummy_path_to_starfile,
@@ -741,7 +737,7 @@ def test_set_wrong_parameters_error():
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=path_to_starfile,
         mode="w",
-        exists_ok=True,
+        exist_ok=True,
     )
 
     with pytest.raises(ValueError):
@@ -784,7 +780,7 @@ def test_bad_pytree_error():
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=path_to_starfile,
         mode="w",
-        exists_ok=True,
+        exist_ok=True,
     )
 
     with pytest.raises(ValueError):
@@ -799,7 +795,7 @@ def test_write_image(
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
         mode="r",
-        exists_ok=True,
+        exist_ok=True,
     )
     parameter_file.path_to_starfile = (
         "tests/outputs/starfile_writing/test_particle_parameters.star"
@@ -875,7 +871,7 @@ def test_write_particle_batched_particle_parameters():
     new_parameters_file = RelionParticleParameterFile(
         path_to_starfile="dummy.star",
         mode="w",
-        exists_ok=True,
+        exist_ok=True,
         options=dict(updates_optics_group=True, loads_envelope=True),
     )
 
@@ -930,7 +926,7 @@ def test_write_starfile_different_envs():
     new_parameters_file = RelionParticleParameterFile(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         mode="w",
-        exists_ok=True,
+        exist_ok=True,
         options=dict(updates_optics_group=True, loads_envelope=True),
     )
 
@@ -938,7 +934,7 @@ def test_write_starfile_different_envs():
     new_parameters_file = RelionParticleParameterFile(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         mode="w",
-        exists_ok=True,
+        exist_ok=True,
         options=dict(updates_optics_group=True, loads_envelope=True),
     )
     new_parameters_file.append(particle_params)
@@ -948,7 +944,7 @@ def test_write_starfile_different_envs():
     new_parameters_file = RelionParticleParameterFile(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         mode="w",
-        exists_ok=True,
+        exist_ok=True,
         options=dict(updates_optics_group=True, loads_envelope=True),
     )
     new_parameters_file.append(particle_params)
@@ -959,7 +955,7 @@ def test_write_starfile_different_envs():
         new_parameters_file = RelionParticleParameterFile(
             path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
             mode="w",
-            exists_ok=True,
+            exist_ok=True,
             options=dict(updates_optics_group=True, loads_envelope=True),
         )
         new_parameters_file.append(particle_params)
@@ -1003,7 +999,7 @@ def test_raise_errors_parameter_file(sample_starfile_path):
         parameter_file = RelionParticleParameterFile(
             path_to_starfile=sample_starfile_path,
             mode="w",
-            exists_ok=True,
+            exist_ok=True,
             options=dict(loads_envelope=False, loads_metadata=False),
             selection_filter={"rlnAngleRot": lambda x: x < 1000.0},
         )
@@ -1109,7 +1105,7 @@ def test_append_relion_stack_dataset():
     new_parameters_file = RelionParticleParameterFile(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         mode="w",
-        exists_ok=True,
+        exist_ok=True,
         options=dict(updates_optics_group=True, loads_envelope=True),
     )
 

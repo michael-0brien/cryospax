@@ -233,7 +233,7 @@ def test_load_multiple_mrcs():
     parameters_file = RelionParticleParameterFile(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         mode="w",
-        exists_ok=True,
+        exist_ok=True,
         options=dict(updates_optics_group=True, loads_envelope=True),
     )
     parameters_file.append(particle_params)

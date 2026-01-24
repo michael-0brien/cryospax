@@ -230,7 +230,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         path_to_starfile: str | pathlib.Path,
         mode: Literal["r", "w"] = "r",
         *,
-        exists_ok: bool = False,
+        exist_ok: bool = False,
         selection_filter: dict[str, Callable] | None = None,
         options: dict[str, Any] = {},
     ):
@@ -244,10 +244,10 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             - If `mode = 'w'`, the dataset is prepared to write new
             *parameters*. This is done by storing an empty dataset in
             `RelionParticleParameterFile.starfile_data`. If a STAR file
-            already exists at `path_to_starfile`, set `exists_ok = True`.
+            already exists at `path_to_starfile`, set `exist_ok = True`.
             - If `mode = 'r'`, the STAR file at `path_to_starfile` is read
             into `RelionParticleParameterFile.starfile_data`.
-        - `exists_ok`:
+        - `exist_ok`:
             If the `path_to_starfile` already exists, if `True` and `mode = 'w'`
             nonetheless stores an empty `RelionParticleParameterFile.starfile_data`.
         - `selection_filter`:
@@ -299,7 +299,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         # The STAR file data
         self._path_to_starfile = pathlib.Path(path_to_starfile)
         self._starfile_data = _load_starfile_data(
-            self._path_to_starfile, selection_filter, mode, exists_ok
+            self._path_to_starfile, selection_filter, mode, exist_ok
         )
 
     @override
@@ -672,7 +672,7 @@ class RelionParticleDataset(
         mode: Literal["r", "w"] = "r",
         *,
         mrcfile_settings: dict[str, Any] = {},
-        loads_parameters: bool = True,
+        only_images: bool = False,
     ):
         """**Arguments:**
 
@@ -713,8 +713,8 @@ class RelionParticleDataset(
                 for `n_characters = 5` and `prefix = 'f'`.
             - 'overwrite':
                 If `True`, overwrite existing MRC file path if it exists.
-        - `loads_parameters`:
-            If `True`, load parameters and images. Otherwise, load only images.
+        - `only_images`:
+            If `False`, load parameters and images. Otherwise, load only images.
         """
         # Set properties. First, core properties of the dataset, starting
         # with the `mode``
@@ -730,7 +730,7 @@ class RelionParticleDataset(
         # ... properties common to reading and writing images
         self._path_to_relion_project = pathlib.Path(path_to_relion_project)
         # ... properties for reading images
-        self._loads_parameters = loads_parameters
+        self._only_images = only_images
         # ... properties for writing images
         self._mrcfile_settings = _dict_to_mrcfile_settings(mrcfile_settings)
         # Now, initialize for `mode = 'r'` vs `mode = 'w'`
@@ -776,7 +776,7 @@ class RelionParticleDataset(
             See [`cryospax.RelionParticleParameterFile`][] for more
             information. This key is optional.
         """  # noqa: E501
-        if self.loads_parameters:
+        if not self.only_images:
             # Load images and parameters. First, read parameters
             # and metadata from the STAR file
             loads_metadata = self.parameter_file.loads_metadata
@@ -1031,28 +1031,28 @@ class RelionParticleDataset(
         self._mrcfile_settings = _dict_to_mrcfile_settings(value)
 
     @property
-    def loads_parameters(self) -> bool:
-        """If `False`, load images and *not* parameters. This gives
+    def only_images(self) -> bool:
+        """If `True`, load images and *not* parameters. This gives
         better performance when it is not necessary to load parameters.
 
         ```python
-        dataset.loads_parameters = False
+        dataset.only_images = True
         particle_info = dataset[0]
         assert particle_info["parameters"] is None  # True
         ```
         """
-        return self._loads_parameters
+        return self._only_images
 
-    @loads_parameters.setter
-    def loads_parameters(self, value: bool):
-        self._loads_parameters = value
+    @only_images.setter
+    def only_images(self, value: bool):
+        self._only_images = value
 
 
 def _load_starfile_data(
     path_to_starfile: pathlib.Path,
     selection_filter: dict[str, Callable] | None,
     mode: Literal["r", "w"],
-    exists_ok: bool,
+    exist_ok: bool,
 ) -> _StarfileData:
     if mode == "r":
         if path_to_starfile.exists():
@@ -1066,12 +1066,12 @@ def _load_starfile_data(
                 "exist. To write a new STAR file, set `mode = 'w'`."
             )
     else:
-        if path_to_starfile.exists() and not exists_ok:
+        if path_to_starfile.exists() and not exist_ok:
             raise FileExistsError(
                 f"Set `mode = 'w'`, but STAR file {str(path_to_starfile)} already "
                 "exists. To read an existing STAR file, set `mode = 'r'` or "
                 "to erase an existing STAR file, set `mode = 'w'` and "
-                "`exists_ok=True`."
+                "`exist_ok=True`."
             )
         else:
             if selection_filter is None:
