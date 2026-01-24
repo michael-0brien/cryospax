@@ -80,5 +80,6 @@ line-length = 90
 [tool.pyright]
 reportIncompatibleMethodOverride = true
 reportIncompatibleVariableOverride = false  # Incompatible with eqx.AbstractVar
-reportInvalidTypeForm = false  # Needed for keeping TypedDict classes private and undocumented
+reportInvalidTypeForm = false  # Keep TypedDict classes private and undocumented
+reportTypedDictNotRequiredAccess = false  # Non-required TypedDicts keys
 include = ["cryospax", "tests"]

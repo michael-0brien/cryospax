@@ -7,7 +7,7 @@ import typing
 import warnings
 from collections.abc import Callable
 from typing import Any, Literal, TypedDict, cast
-from typing_extensions import override
+from typing_extensions import NotRequired, override
 
 import equinox as eqx
 import jax
@@ -96,13 +96,13 @@ else:
         pose: EulerAnglePose
         transfer_theory: ContrastTransferTheory
 
-        metadata: pd.DataFrame | None
+        metadata: NotRequired[pd.DataFrame]
 
     class _ParticleStackInfo(TypedDict):
         """Particle stack info from RELION."""
 
-        parameters: _ParticleParameterInfo | None
         images: Float[np.ndarray, "... y_dim x_dim"]
+        parameters: NotRequired[_ParticleParameterInfo]
 
     _ParticleParameterLike = dict[str, Any] | _ParticleParameterInfo
     _ParticleStackLike = dict[str, Any] | _ParticleStackInfo
@@ -340,6 +340,9 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             self._options["pad_options"],
             self.rotation_convention,
         )
+        parameter_info = _ParticleParameterInfo(
+            image_config=image_config, pose=pose, transfer_theory=transfer_theory
+        )
         if self.loads_metadata:
             # ... convert to dataframe for serialization
             if isinstance(particle_data_at_index, pd.Series):
@@ -351,15 +354,9 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                 column for column in columns if column in redundant_entry_labels
             ]
             metadata = particle_data_at_index.drop(remove_columns, axis="columns")
-        else:
-            metadata = None
+            parameter_info["metadata"] = metadata
 
-        return _ParticleParameterInfo(
-            image_config=image_config,
-            pose=pose,
-            transfer_theory=transfer_theory,
-            metadata=metadata,
-        )
+        return parameter_info
 
     @override
     def __len__(self) -> int:
@@ -564,7 +561,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
 
         ```python
         parameter_info = parameter_file[index]
-        assert isinstance(parameter["metadata"], pandas.DataFrame)
+        assert "metadata" in parameter_info  # True
         ```
 
         The `metadata` is a `pandas.DataFrame` that includes the
@@ -585,7 +582,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
 
         ```python
         parameter_info = parameter_file[index]
-        assert parameter["transfer_theory"].envelope is not None  # True
+        assert parameter_info["transfer_theory"].envelope is not None  # True
         ```
         """
         return self._options["loads_envelope"]
@@ -784,12 +781,13 @@ class RelionParticleDataset(
             # ... read parameters
             parameters = self.parameter_file[index]
             # ... validate the metadata
-            particle_data_at_index = cast(pd.DataFrame, parameters["metadata"])
+            assert "metadata" in parameters
+            particle_data_at_index = parameters["metadata"]
             _validate_rln_image_name_exists(particle_data_at_index, index)
             # ... reset boolean to original value
             self.parameter_file.loads_metadata = loads_metadata
             if not loads_metadata:
-                parameters["metadata"] = None
+                del parameters["metadata"]
             # ... grab shape
             shape = parameters["image_config"].shape
             # ... load stack of images
@@ -829,7 +827,7 @@ class RelionParticleDataset(
             ):
                 images = np.squeeze(images)
 
-            return _ParticleStackInfo(parameters=None, images=images)
+            return _ParticleStackInfo(images=images)
 
     @override
     def __len__(self) -> int:
@@ -1038,7 +1036,8 @@ class RelionParticleDataset(
         ```python
         dataset.just_images = True
         particle_info = dataset[0]
-        assert particle_info["parameters"] is None  # True
+        assert "images" in particle_info  # True
+        assert "parameters" not in particle_info  # True
         ```
         """
         return self._just_images
