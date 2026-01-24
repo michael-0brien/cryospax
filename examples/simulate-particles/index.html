@@ -699,7 +699,7 @@
 <span class="n">parameter_file</span> <span class="o">=</span> <span class="n">spx</span><span class="o">.</span><span class="n">RelionParticleParameterFile</span><span class="p">(</span>
     <span class="n">path_to_starfile</span><span class="o">=</span><span class="s2">&quot;./outputs/particles.star&quot;</span><span class="p">,</span>
     <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span>  <span class="c1"># writing mode!</span>
-    <span class="n">exists_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># in case the file already exists</span>
+    <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># in case the file already exists</span>
     <span class="n">options</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">broadcasts_image_config</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">pad_options</span><span class="o">=</span><span class="n">pad_options</span><span class="p">),</span>
 <span class="p">)</span>
 <span class="n">parameter_file</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">particle_parameters</span><span class="p">)</span>
@@ -844,7 +844,7 @@ mean and standard deviation of our simulated image without noise. After normaliz
 <div class="highlight"><pre><span></span><code>(&lt;Figure size 300x300 with 2 Axes&gt;,
  &lt;Axes: title={&#39;center&#39;: &#39;Simulated Image&#39;}&gt;)
 </code></pre></div>
-<p><img alt="img" src="../_data/e8d504bf2c5542c5a54058ee69c6230a.png" /></p>
+<p><img alt="img" src="../_data/d73bd77ff61447d093632956c91d03d5.png" /></p>
 <p>Finally, simulate a dataset using <a class="autorefs autorefs-internal" href="../../api/simulate-particles/#cryospax.simulate_particle_stack"><code>cryospax.simulate_particle_stack</code></a>.</p>
 <div class="admonition info">
 <p class="admonition-title">The <code>simulate_particle_stack</code> tool</p>
@@ -904,7 +904,7 @@ the MRC files.</p>
 <span class="n">particles</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">9</span><span class="p">]</span>
 <span class="n">plot_image_stack</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">])</span>
 </code></pre></div>
-<p><img alt="img" src="../_data/314a73a94cbb4a32bff65381bcda9ed8.png" /></p>
+<p><img alt="img" src="../_data/6263e5ca3e3747efbdfaddd9899091d1.png" /></p>
 
 
 
