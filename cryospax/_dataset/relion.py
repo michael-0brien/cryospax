@@ -672,7 +672,7 @@ class RelionParticleDataset(
         mode: Literal["r", "w"] = "r",
         *,
         mrcfile_settings: dict[str, Any] = {},
-        only_images: bool = False,
+        just_images: bool = False,
     ):
         """**Arguments:**
 
@@ -713,7 +713,7 @@ class RelionParticleDataset(
                 for `n_characters = 5` and `prefix = 'f'`.
             - 'overwrite':
                 If `True`, overwrite existing MRC file path if it exists.
-        - `only_images`:
+        - `just_images`:
             If `False`, load parameters and images. Otherwise, load only images.
         """
         # Set properties. First, core properties of the dataset, starting
@@ -730,7 +730,7 @@ class RelionParticleDataset(
         # ... properties common to reading and writing images
         self._path_to_relion_project = pathlib.Path(path_to_relion_project)
         # ... properties for reading images
-        self._only_images = only_images
+        self._just_images = just_images
         # ... properties for writing images
         self._mrcfile_settings = _dict_to_mrcfile_settings(mrcfile_settings)
         # Now, initialize for `mode = 'r'` vs `mode = 'w'`
@@ -776,7 +776,7 @@ class RelionParticleDataset(
             See [`cryospax.RelionParticleParameterFile`][] for more
             information. This key is optional.
         """  # noqa: E501
-        if not self.only_images:
+        if not self.just_images:
             # Load images and parameters. First, read parameters
             # and metadata from the STAR file
             loads_metadata = self.parameter_file.loads_metadata
@@ -1031,21 +1031,21 @@ class RelionParticleDataset(
         self._mrcfile_settings = _dict_to_mrcfile_settings(value)
 
     @property
-    def only_images(self) -> bool:
+    def just_images(self) -> bool:
         """If `True`, load images and *not* parameters. This gives
         better performance when it is not necessary to load parameters.
 
         ```python
-        dataset.only_images = True
+        dataset.just_images = True
         particle_info = dataset[0]
         assert particle_info["parameters"] is None  # True
         ```
         """
-        return self._only_images
+        return self._just_images
 
-    @only_images.setter
-    def only_images(self, value: bool):
-        self._only_images = value
+    @just_images.setter
+    def just_images(self, value: bool):
+        self._just_images = value
 
 
 def _load_starfile_data(
