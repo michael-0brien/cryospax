@@ -285,9 +285,7 @@ def test_load_starfile_ctf_params(sample_starfile_path):
 def test_load_starfile_pose_params(sample_starfile_path):
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
-        options=dict(
-            loads_envelope=False, loads_metadata=True, rotation_convention="object"
-        ),
+        options=dict(loads_envelope=False, loads_metadata=True),
     )
 
     parameters = parameter_file[:]
@@ -330,45 +328,6 @@ def test_load_starfile_pose_params(sample_starfile_path):
             -particle_data["rlnAnglePsi"][i],
             rtol=1e-5,
         )
-
-
-def test_load_starfile_pose_inverse(sample_starfile_path):
-    parameter_file = RelionParticleParameterFile(
-        path_to_starfile=sample_starfile_path,
-        options=dict(
-            loads_envelope=False, loads_metadata=True, rotation_convention="object"
-        ),
-    )
-    parameter_file_inverse = RelionParticleParameterFile(
-        path_to_starfile=sample_starfile_path,
-        options=dict(
-            loads_envelope=False, loads_metadata=True, rotation_convention="frame"
-        ),
-    )
-
-    # Without batch dim
-    parameters = parameter_file[0]
-    pose = parameters["pose"]
-    parameters_inverse = parameter_file_inverse[0]
-    pose_inverse = parameters_inverse["pose"]
-
-    get_rotation = lambda p: p.rotation
-    rotation = get_rotation(pose)
-    rotation_inverse = get_rotation(pose_inverse)
-
-    np.testing.assert_allclose(rotation.wxyz, rotation_inverse.wxyz.at[1:].mul(-1))
-
-    # With batch dim
-    parameters = parameter_file[:]
-    pose = parameters["pose"]
-    parameters_inverse = parameter_file_inverse[:]
-    pose_inverse = parameters_inverse["pose"]
-
-    get_rotation = eqx.filter_vmap(lambda p: p.rotation)
-    rotation = get_rotation(pose)
-    rotation_inverse = get_rotation(pose_inverse)
-
-    np.testing.assert_allclose(rotation.wxyz, rotation_inverse.wxyz.at[:, 1:].mul(-1))
 
 
 def test_load_starfile_wo_metadata(sample_starfile_path):
