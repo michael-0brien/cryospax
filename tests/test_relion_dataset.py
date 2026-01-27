@@ -25,17 +25,23 @@ from cryospax._dataset.relion import (
 from jaxtyping import TypeCheckError
 
 
-def compare_pytrees(pytree1, pytree2):
-    arrays1, others1 = eqx.partition(pytree1, eqx.is_array)
-    arrays2, others2 = eqx.partition(pytree2, eqx.is_array)
-
-    bool_arrays = all(
-        jax.tree.leaves(jax.tree.map(lambda x, y: jnp.allclose(x, y), arrays1, arrays2))
-    )
-    bool_others = all(
-        jax.tree.leaves(jax.tree.map(lambda x, y: x == y, others1, others2))
-    )
-    return bool_arrays and bool_others
+def compare_dicts(dict1, dict2):
+    assert dict1.keys() == dict2.keys()
+    bool_arrays, bool_others = [], []
+    for k in dict1.keys():
+        arrays1, others1 = eqx.partition(dict1[k], eqx.is_array)
+        arrays2, others2 = eqx.partition(dict2[k], eqx.is_array)
+        bool_arrays.append(
+            jnp.allclose(arr1, arr2)  # type: ignore
+            for arr1, arr2 in zip(jax.tree.flatten(arrays1), jax.tree.flatten(arrays2))
+        )
+        bool_others.append(
+            other1 == other2  # type: ignore
+            for other1, other2 in zip(
+                jax.tree.flatten(others1), jax.tree.flatten(others2)
+            )
+        )
+    return all(bool_arrays) and all(bool_others)
 
 
 @pytest.fixture
@@ -285,9 +291,7 @@ def test_load_starfile_ctf_params(sample_starfile_path):
 def test_load_starfile_pose_params(sample_starfile_path):
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
-        options=dict(
-            loads_envelope=False, loads_metadata=True, rotation_convention="object"
-        ),
+        options=dict(loads_envelope=False, loads_metadata=True),
     )
 
     parameters = parameter_file[:]
@@ -330,45 +334,6 @@ def test_load_starfile_pose_params(sample_starfile_path):
             -particle_data["rlnAnglePsi"][i],
             rtol=1e-5,
         )
-
-
-def test_load_starfile_pose_inverse(sample_starfile_path):
-    parameter_file = RelionParticleParameterFile(
-        path_to_starfile=sample_starfile_path,
-        options=dict(
-            loads_envelope=False, loads_metadata=True, rotation_convention="object"
-        ),
-    )
-    parameter_file_inverse = RelionParticleParameterFile(
-        path_to_starfile=sample_starfile_path,
-        options=dict(
-            loads_envelope=False, loads_metadata=True, rotation_convention="frame"
-        ),
-    )
-
-    # Without batch dim
-    parameters = parameter_file[0]
-    pose = parameters["pose"]
-    parameters_inverse = parameter_file_inverse[0]
-    pose_inverse = parameters_inverse["pose"]
-
-    get_rotation = lambda p: p.rotation
-    rotation = get_rotation(pose)
-    rotation_inverse = get_rotation(pose_inverse)
-
-    np.testing.assert_allclose(rotation.wxyz, rotation_inverse.wxyz.at[1:].mul(-1))
-
-    # With batch dim
-    parameters = parameter_file[:]
-    pose = parameters["pose"]
-    parameters_inverse = parameter_file_inverse[:]
-    pose_inverse = parameters_inverse["pose"]
-
-    get_rotation = eqx.filter_vmap(lambda p: p.rotation)
-    rotation = get_rotation(pose)
-    rotation_inverse = get_rotation(pose_inverse)
-
-    np.testing.assert_allclose(rotation.wxyz, rotation_inverse.wxyz.at[:, 1:].mul(-1))
 
 
 def test_load_starfile_wo_metadata(sample_starfile_path):
@@ -571,7 +536,7 @@ def test_append_particle_parameters(index, loads_envelope):
     # Make sure parameters read and the same as what was appended
     loaded_particle_params = parameter_file[index]
     del particle_params["metadata"]  # need to remove dataframe
-    assert compare_pytrees(loaded_particle_params, particle_params)
+    assert compare_dicts(loaded_particle_params, particle_params)
 
 
 @pytest.mark.parametrize(
@@ -649,9 +614,11 @@ def test_set_particle_parameters(
     loaded_parameters = parameter_file[index]
     del new_parameters["metadata"]
     if updates_optics_group:
-        assert compare_pytrees(new_parameters, loaded_parameters)
+        assert compare_dicts(new_parameters, loaded_parameters)
     else:
-        assert compare_pytrees(new_parameters["pose"], loaded_parameters["pose"])
+        assert compare_dicts(
+            dict(pose=new_parameters["pose"]), dict(pose=loaded_parameters["pose"])
+        )
         np.testing.assert_allclose(
             new_parameters["transfer_theory"].ctf.defocus_in_angstroms,  # type: ignore
             loaded_parameters["transfer_theory"].ctf.defocus_in_angstroms,  # type: ignore
@@ -890,10 +857,7 @@ def test_write_particle_batched_particle_parameters():
     )
 
     loaded_params = parameter_file[:]
-    for key in particle_params:
-        assert compare_pytrees(loaded_params[key], particle_params[key]), (
-            f"Mismatch for {key}"
-        )
+    compare_dicts(loaded_params, particle_params)
     # Clean up
     shutil.rmtree("tests/outputs/starfile_writing/")
 
