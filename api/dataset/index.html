@@ -757,7 +757,7 @@
 
 <h4 id="cryospax.AbstractDataset" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.AbstractDataset</code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/45bfeff39b2340400fa4867c242189e3a0ef695f/cryospax/_dataset/base_dataset.py#L19-L67"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/378aec23345416a5735d9ab50d330e93cb323bf8/cryospax/_dataset/base_dataset.py#L19-L67"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.AbstractDataset" class="headerlink" title="Permanent link">¤</a></h4>
@@ -874,7 +874,7 @@ a normal python class, not a pytree.</p>
 
 <h4 id="cryospax.AbstractParticleParameterFile" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.AbstractParticleParameterFile(<a class="autorefs autorefs-internal" href="#cryospax.AbstractDataset">cryospax.AbstractDataset</a>)</code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/45bfeff39b2340400fa4867c242189e3a0ef695f/cryospax/_dataset/base_dataset.py#L70-L105"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/378aec23345416a5735d9ab50d330e93cb323bf8/cryospax/_dataset/base_dataset.py#L70-L105"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.AbstractParticleParameterFile" class="headerlink" title="Permanent link">¤</a></h4>
@@ -1051,7 +1051,7 @@ a normal python class, not a pytree.</p>
 
 <h4 id="cryospax.AbstractRelionParticleParameterFile" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.AbstractRelionParticleParameterFile(<a class="autorefs autorefs-internal" href="#cryospax.AbstractParticleParameterFile">cryospax.AbstractParticleParameterFile</a>)</code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/45bfeff39b2340400fa4867c242189e3a0ef695f/cryospax/_dataset/relion.py#L131-L219"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/378aec23345416a5735d9ab50d330e93cb323bf8/cryospax/_dataset/relion.py#L130-L208"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.AbstractRelionParticleParameterFile" class="headerlink" title="Permanent link">¤</a></h4>
@@ -1345,31 +1345,6 @@ slightly different indexing behavior downstream.</p>
 
 
 
-
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h5 id="cryospax.AbstractRelionParticleParameterFile.rotation_convention" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <code class="highlight language-python"><span class="n">rotation_convention</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#cryospax.AbstractRelionParticleParameterFile.rotation_convention" class="headerlink" title="Permanent link">¤</a></h5>
-
-
-    <div class="doc doc-contents ">
-
-    </div>
-
-</div>
-
-
-
-
   </div>
 
     </div>
@@ -1383,7 +1358,7 @@ slightly different indexing behavior downstream.</p>
 
 <h4 id="cryospax.RelionParticleParameterFile" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.RelionParticleParameterFile(<a class="autorefs autorefs-internal" href="#cryospax.AbstractRelionParticleParameterFile">cryospax.AbstractRelionParticleParameterFile</a>)</code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/45bfeff39b2340400fa4867c242189e3a0ef695f/cryospax/_dataset/relion.py#L222-L656"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/378aec23345416a5735d9ab50d330e93cb323bf8/cryospax/_dataset/relion.py#L211-L615"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.RelionParticleParameterFile" class="headerlink" title="Permanent link">¤</a></h4>
@@ -1395,6 +1370,19 @@ slightly different indexing behavior downstream.</p>
         <p>A dataset that wraps a RELION particle stack in
 <a href="https://relion.readthedocs.io/en/latest/Reference/Conventions.html">STAR</a>
 format.</p>
+<div class="admonition info">
+<p class="admonition-title">Matching cryoJAX and RELION rotation conventions</p>
+<p>When simulating images with <a href="https://michael-0brien.github.io/cryojax/api/simulator/entry-point/#cryojax.simulator.make_image_model"><code>cryojax.simulator.make_image_model</code></a>,
+conventions will always match between cryoJAX and RELION.</p>
+<p>However, there are cases where it is necessary to correct for
+the difference with a call to <code>pose.to_inverse_rotation()</code>, where
+<code>pose</code> is the cryoJAX pose class loaded from the <code>RelionParticleParameterFile</code>.</p>
+<p>Whether or not this correction should be made depends on if the pose
+represents a rotation of the <em>object</em> or the <em>frame</em>. This is encoded
+by the cryoJAX volume representation <code>volume.rotation_convention</code>
+metadata. When this is equal to <code>'frame'</code> and <em>not</em> using <code>make_image_model</code>,
+call <code>pose.to_inverse_rotation</code> to match with RELION.</p>
+</div>
 
 
 
@@ -1472,16 +1460,6 @@ into <code>RelionParticleParameterFile.starfile_data</code>.</li>
     If <code>True</code>, when re-writing STAR file entries via
     <code>dataset[idx] = parameters</code> syntax, creates a new optics group entry.
     By default, <code>False</code>.</li>
-<li>'rotation_convention':
-    If <code>'object'</code>, the loader loads/writes poses in the convention that
-    the rotation is of the <em>object</em>. If <code>'frame'</code>, the rotation is of
-    the frame (i.e. the rotation is inverted).
-    The pose passed to <a href="https://michael-0brien.github.io/cryojax/api/simulator/entry-point/#cryojax.simulator.make_image_model"><code>cryojax.simulator.make_image_model</code></a>
-    is always of the object, but advanced considerations may require
-    setting <code>rotation_convention = 'frame'</code> (or manually calling
-    <code>pose.to_inverse_rotation()</code>) to correctly match RELION and
-    cryoJAX conventions.
-    By default, <code>'object'</code>.</li>
 <li>'pad_options':
     Padding options for image simulation, passed to the <code>BasicImageConfig</code>.
     See <code>BasicImageConfig</code> for documentation.
@@ -1936,47 +1914,6 @@ every call to <code>parameter_file[...] = value</code>.</p>
 
 
 
-
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h5 id="cryospax.RelionParticleParameterFile.rotation_convention" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <code class="highlight language-python"><span class="n">rotation_convention</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#cryospax.RelionParticleParameterFile.rotation_convention" class="headerlink" title="Permanent link">¤</a></h5>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Whether or not parameters are loaded with convention
-that the rotation is of the <em>object</em> (i.e. the protein)
-or the <em>frame</em> (i.e. a voxel map).</p>
-<div class="admonition info">
-<p class="admonition-title">Convert between conventions</p>
-<p>If you load in one convention, it is straightforward
-to convert to the other.</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Load in &#39;object&#39; convention</span>
-<span class="n">parameter_file</span><span class="o">.</span><span class="n">rotation_convention</span> <span class="o">=</span> <span class="s2">&quot;object&quot;</span>
-<span class="n">parameter_info</span> <span class="o">=</span> <span class="n">parameter_file</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="n">pose_object</span> <span class="o">=</span> <span class="n">parameter_info</span><span class="p">[</span><span class="s2">&quot;pose&quot;</span><span class="p">]</span>
-<span class="c1"># Convert to &#39;frame&#39; convention</span>
-<span class="n">pose_frame</span> <span class="o">=</span> <span class="n">pose_object</span><span class="o">.</span><span class="n">to_inverse_rotation</span><span class="p">()</span>
-</code></pre></div>
-</div>
-
-    </div>
-
-</div>
-
-
-
-
   </div>
 
     </div>
@@ -1992,7 +1929,7 @@ to convert to the other.</p>
 
 <h4 id="cryospax.AbstractParticleDataset" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.AbstractParticleDataset(<a class="autorefs autorefs-internal" href="#cryospax.AbstractDataset">cryospax.AbstractDataset</a>)</code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/45bfeff39b2340400fa4867c242189e3a0ef695f/cryospax/_dataset/base_dataset.py#L108-L135"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/378aec23345416a5735d9ab50d330e93cb323bf8/cryospax/_dataset/base_dataset.py#L108-L135"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.AbstractParticleDataset" class="headerlink" title="Permanent link">¤</a></h4>
@@ -2167,7 +2104,7 @@ to convert to the other.</p>
 
 <h4 id="cryospax.RelionParticleDataset" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.RelionParticleDataset(<a class="autorefs autorefs-internal" href="#cryospax.AbstractParticleDataset">cryospax.AbstractParticleDataset</a>)</code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/45bfeff39b2340400fa4867c242189e3a0ef695f/cryospax/_dataset/relion.py#L659-L1048"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/378aec23345416a5735d9ab50d330e93cb323bf8/cryospax/_dataset/relion.py#L618-L1007"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.RelionParticleDataset" class="headerlink" title="Permanent link">¤</a></h4>
@@ -2521,7 +2458,7 @@ for more information.</p>
 
 <h4 id="cryospax.read_starfile" class="doc doc-heading">
   <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">cryospax</span><span class="o">.</span><span class="n">read_starfile</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span></code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/45bfeff39b2340400fa4867c242189e3a0ef695f/cryospax/_io.py#L12-L29"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/378aec23345416a5735d9ab50d330e93cb323bf8/cryospax/_io.py#L12-L29"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.read_starfile" class="headerlink" title="Permanent link">¤</a></h4>
@@ -2549,7 +2486,7 @@ for more information.</p>
 
 <h4 id="cryospax.write_starfile" class="doc doc-heading">
   <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">cryospax</span><span class="o">.</span><span class="n">write_starfile</span><span class="p">(</span><span class="n">starfile_data</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span></code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/45bfeff39b2340400fa4867c242189e3a0ef695f/cryospax/_io.py#L32-L51"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/378aec23345416a5735d9ab50d330e93cb323bf8/cryospax/_io.py#L32-L51"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.write_starfile" class="headerlink" title="Permanent link">¤</a></h4>
