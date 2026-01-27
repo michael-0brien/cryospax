@@ -6,7 +6,7 @@ import re
 import typing
 import warnings
 from collections.abc import Callable
-from typing import Any, Literal, TypedDict, cast
+from typing import Any, Literal, TypedDict
 from typing_extensions import NotRequired, override
 
 import equinox as eqx
@@ -112,7 +112,6 @@ else:
         loads_envelope: bool
         broadcasts_image_config: bool
         updates_optics_group: bool
-        rotation_convention: Literal["object", "frame"]
         pad_options: dict[str, Any]
 
     class _StarfileData(TypedDict):
@@ -208,22 +207,27 @@ class AbstractRelionParticleParameterFile(
     def updates_optics_group(self, value: bool):
         raise NotImplementedError
 
-    @property
-    @abc.abstractmethod
-    def rotation_convention(self) -> Literal["object", "frame"]:
-        raise NotImplementedError
-
-    @rotation_convention.setter
-    @abc.abstractmethod
-    def rotation_convention(self, value: Literal["object", "frame"]):
-        raise NotImplementedError
-
 
 class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     """A dataset that wraps a RELION particle stack in
     [STAR](https://relion.readthedocs.io/en/latest/Reference/Conventions.html)
     format.
-    """
+
+    !!! info "Matching cryoJAX and RELION rotation conventions"
+
+        When simulating images with [`cryojax.simulator.make_image_model`](https://michael-0brien.github.io/cryojax/api/simulator/entry-point/#cryojax.simulator.make_image_model),
+        conventions will always match between cryoJAX and RELION.
+
+        However, there are cases where it is necessary to correct for
+        the difference with a call to `pose.to_inverse_rotation()`, where
+        `pose` is the cryoJAX pose class loaded from the `RelionParticleParameterFile`.
+
+        Whether or not this correction should be made depends on if the pose
+        represents a rotation of the *object* or the *frame*. This is encoded
+        by the cryoJAX volume representation `volume.rotation_convention`
+        metadata. When this is equal to `'frame'` and *not* using `make_image_model`,
+        call `pose.to_inverse_rotation` to match with RELION.
+    """  # noqa: E501
 
     def __init__(
         self,
@@ -278,16 +282,6 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                 If `True`, when re-writing STAR file entries via
                 `dataset[idx] = parameters` syntax, creates a new optics group entry.
                 By default, `False`.
-            - 'rotation_convention':
-                If `'object'`, the loader loads/writes poses in the convention that
-                the rotation is of the *object*. If `'frame'`, the rotation is of
-                the frame (i.e. the rotation is inverted).
-                The pose passed to [`cryojax.simulator.make_image_model`](https://michael-0brien.github.io/cryojax/api/simulator/entry-point/#cryojax.simulator.make_image_model)
-                is always of the object, but advanced considerations may require
-                setting `rotation_convention = 'frame'` (or manually calling
-                `pose.to_inverse_rotation()`) to correctly match RELION and
-                cryoJAX conventions.
-                By default, `'object'`.
             - 'pad_options':
                 Padding options for image simulation, passed to the `BasicImageConfig`.
                 See `BasicImageConfig` for documentation.
@@ -318,7 +312,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         - 'metadata':
             If `loads_metadata = True`, a `pandas.DataFrame` of entries
             *not* used when loading the `pose`, `image_config`, and
-            `transfer_theory`. Otherwise, `None`.
+            `transfer_theory` (e.g. the 'rlnClassNumber'). Otherwise, this
+            key is not included.
         """  # noqa: E501
         # Validate index
         n_rows = self.starfile_data["particles"].shape[0]
@@ -338,7 +333,6 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             self.broadcasts_image_config,
             self.loads_envelope,
             self._options["pad_options"],
-            self.rotation_convention,
         )
         parameter_info = _ParticleParameterInfo(
             image_config=image_config, pose=pose, transfer_theory=transfer_theory
@@ -386,10 +380,6 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         _validate_dataset_index(type(self), index, n_rows)
         # ... also, the parameters too
         _validate_parameters(value, force_keys=False)
-        # Invert the pose if desired
-        if "pose" in value:
-            if self.rotation_convention == "frame":
-                value["pose"] = _invert_rotation(value["pose"])
         # Grab the current and new optics and particle data
         if self.updates_optics_group:
             optics_group_index = _make_optics_group_index(self.starfile_data["optics"])
@@ -438,10 +428,6 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         """
         # Make sure parameters are valid
         _validate_parameters(value, force_keys=True)
-        # Invert the pose if desired
-        if "pose" in value:
-            if self.rotation_convention == "frame":
-                value["pose"] = _invert_rotation(value["pose"])
         # Make new optics group
         optics_group_index = _make_optics_group_index(self.starfile_data["optics"])
         optics_data, optics_data_to_append = (
@@ -628,32 +614,6 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     def updates_optics_group(self, value: bool):
         self._options["updates_optics_group"] = value
 
-    @property
-    def rotation_convention(self) -> Literal["object", "frame"]:
-        """Whether or not parameters are loaded with convention
-        that the rotation is of the *object* (i.e. the protein)
-        or the *frame* (i.e. a voxel map).
-
-        !!! info "Convert between conventions"
-
-            If you load in one convention, it is straightforward
-            to convert to the other.
-
-            ```python
-            # Load in 'object' convention
-            parameter_file.rotation_convention = "object"
-            parameter_info = parameter_file[0]
-            pose_object = parameter_info["pose"]
-            # Convert to 'frame' convention
-            pose_frame = pose_object.to_inverse_rotation()
-            ```
-        """
-        return self._options["rotation_convention"]
-
-    @rotation_convention.setter
-    def rotation_convention(self, value: Literal["object", "frame"]):
-        self._options["rotation_convention"] = _validate_rotation_convention(value)
-
 
 class RelionParticleDataset(
     AbstractParticleDataset[_ParticleStackInfo, _ParticleStackLike]
@@ -771,7 +731,8 @@ class RelionParticleDataset(
             key is required.
         - 'parameters':
             See [`cryospax.RelionParticleParameterFile`][] for more
-            information. This key is optional.
+            information. This key is not included if
+            `just_images = True`.
         """  # noqa: E501
         if not self.just_images:
             # Load images and parameters. First, read parameters
@@ -781,7 +742,6 @@ class RelionParticleDataset(
             # ... read parameters
             parameters = self.parameter_file[index]
             # ... validate the metadata
-            assert "metadata" in parameters
             particle_data_at_index = parameters["metadata"]
             _validate_rln_image_name_exists(particle_data_at_index, index)
             # ... reset boolean to original value
@@ -1108,15 +1068,6 @@ def _validate_mode(mode: str) -> Literal["r", "w"]:
     return mode  # type: ignore
 
 
-def _validate_rotation_convention(mode: str) -> Literal["frame", "object"]:
-    if mode not in ["frame", "object"]:
-        raise ValueError(
-            f"Passed unsupported `rotation_convention = {mode}`. "
-            "Supported modes are 'object' and 'frame'."
-        )
-    return mode  # type: ignore
-
-
 def _select_particles(
     starfile_data: dict[str, pd.DataFrame], selection_filter: dict[str, Callable]
 ) -> dict[str, pd.DataFrame]:
@@ -1175,7 +1126,6 @@ def _make_pytrees_from_starfile(
     broadcasts_image_config,
     loads_envelope,
     pad_options,
-    rotation_convention,
 ) -> tuple[BasicImageConfig, ContrastTransferTheory, EulerAnglePose]:
     float_dtype = jax.dtypes.canonicalize_dtype(float)
     # Load CTF parameters. First from particle data
@@ -1313,8 +1263,6 @@ def _make_pytrees_from_starfile(
         transfer_theory = _make_transfer_theory(*transfer_theory_params)  # type: ignore
         # ... finally the `EulerAnglePose`
         pose = _make_pose(*pose_params)
-        if rotation_convention == "frame":
-            pose = _invert_rotation(pose)
     # Now, convert arrays to numpy in case the user wishes to do preprocessing
     pytree_dynamic, pytree_static = eqx.partition(
         (image_config, transfer_theory, pose), eqx.is_array
@@ -1746,20 +1694,19 @@ def _parameters_to_particle_data(
     # Finally, see if the particle parameters has metadata and if so,
     # add this
     if "metadata" in parameters:
-        if parameters["metadata"] is not None:
-            metadata = cast(pd.DataFrame, parameters["metadata"])
-            if n_particles != metadata.index.size:
-                raise ValueError(
-                    "When adding custom metadata to STAR file "
-                    "with `parameter_file[index] = foo` or `parameter_file.append(foo)`, "
-                    "found the number of particles "
-                    "in `foo['metadata']` was inconsistent with the "
-                    "number of particles in `foo['pose']`."
-                )
-            # Add metadata to dataframe
-            particle_data = pd.concat(
-                [particle_data, metadata], axis="columns", verify_integrity=True
+        metadata = parameters["metadata"]
+        if n_particles != metadata.index.size:
+            raise ValueError(
+                "When adding custom metadata to STAR file "
+                "with `parameter_file[index] = foo` or `parameter_file.append(foo)`, "
+                "found the number of particles "
+                "in `foo['metadata']` was inconsistent with the "
+                "number of particles in `foo['pose']`."
             )
+        # Add metadata to dataframe
+        particle_data = pd.concat(
+            [particle_data, metadata], axis="columns", verify_integrity=True
+        )
     return particle_data
 
 
@@ -1830,18 +1777,12 @@ def _dict_to_options(d: dict[str, Any]) -> _Options:
     updates_optics_group = (
         d["updates_optics_group"] if "updates_optics_group" in d else False
     )
-    rotation_convention = (
-        _validate_rotation_convention(d["rotation_convention"])
-        if "rotation_convention" in d
-        else "object"
-    )
     pad_options = d["pad_options"] if "pad_options" in d else {}
     return _Options(
         loads_metadata=loads_metadata,
         broadcasts_image_config=broadcasts_image_config,
         loads_envelope=loads_envelope,
         updates_optics_group=updates_optics_group,
-        rotation_convention=rotation_convention,
         pad_options=pad_options,
     )
 
