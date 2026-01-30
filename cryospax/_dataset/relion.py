@@ -110,7 +110,6 @@ else:
     class _Options(TypedDict):
         loads_metadata: bool
         loads_envelope: bool
-        broadcasts_image_config: bool
         updates_optics_group: bool
         pad_options: dict[str, Any]
 
@@ -189,16 +188,6 @@ class AbstractRelionParticleParameterFile(
 
     @property
     @abc.abstractmethod
-    def broadcasts_image_config(self) -> bool:
-        raise NotImplementedError
-
-    @broadcasts_image_config.setter
-    @abc.abstractmethod
-    def broadcasts_image_config(self, value: bool):
-        raise NotImplementedError
-
-    @property
-    @abc.abstractmethod
     def updates_optics_group(self) -> bool:
         raise NotImplementedError
 
@@ -270,10 +259,6 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                 If this is set to `True`, note that dictionaries cannot pass through
                 JIT boundaries without removing the metadata.
                 By default, `False`.
-            - 'broadcasts_image_config':
-                If `True`, image config parameters are broadcasted with leading dimension
-                as the number of particles.
-                By default, `True`.
             - 'loads_envelope':
                 If `True`, read in the parameters of the CTF envelope function, i.e.
                 "rlnCtfScalefactor" and "rlnCtfBfactor".
@@ -330,7 +315,6 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         image_config, transfer_theory, pose = _make_pytrees_from_starfile(
             particle_data_at_index,
             optics_group,
-            self.broadcasts_image_config,
             self.loads_envelope,
             self._options["pad_options"],
         )
@@ -577,29 +561,6 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     @override
     def loads_envelope(self, value: bool):
         self._options["loads_envelope"] = value
-
-    @property
-    @override
-    def broadcasts_image_config(self) -> bool:
-        """Whether or not parameters in the loaded `image_config`
-        have a batch dimension.
-
-        ```python
-        # If `True`:
-        parameter_info = parameter_file[1:10]
-        assert parameter["image_config"].pixel_size.shape == (10,)  # True
-        ...
-        # If `False`
-        parameter_info = parameter_file[1:10]
-        assert parameter["image_config"].pixel_size.shape == ()  # True
-        ```
-        """
-        return self._options["broadcasts_image_config"]
-
-    @broadcasts_image_config.setter
-    @override
-    def broadcasts_image_config(self, value: bool):
-        self._options["broadcasts_image_config"] = value
 
     @property
     @override
@@ -1123,7 +1084,6 @@ def _select_particles(
 def _make_pytrees_from_starfile(
     particle_data,
     optics_data,
-    broadcasts_image_config,
     loads_envelope,
     pad_options,
 ) -> tuple[BasicImageConfig, ContrastTransferTheory, EulerAnglePose]:
@@ -1175,9 +1135,6 @@ def _make_pytrees_from_starfile(
     # Image config parameters
     pixel_size = np.asarray(optics_data["rlnImagePixelSize"], dtype=float_dtype)
     voltage_in_kilovolts = np.asarray(optics_data["rlnVoltage"], dtype=float_dtype)
-    if broadcasts_image_config and len(batch_shape) > 0:
-        pixel_size = np.full(batch_shape, pixel_size)
-        voltage_in_kilovolts = np.full(batch_shape, voltage_in_kilovolts)
     # Pose parameters. Values for the pose are optional,
     # so look to see if each key is present
     particle_keys = particle_data.keys()
@@ -1770,9 +1727,6 @@ def _dict_to_mrcfile_settings(d: dict[str, Any]) -> _MrcfileSettings:
 
 def _dict_to_options(d: dict[str, Any]) -> _Options:
     loads_metadata = d["loads_metadata"] if "loads_metadata" in d else False
-    broadcasts_image_config = (
-        d["broadcasts_image_config"] if "broadcasts_image_config" in d else True
-    )
     loads_envelope = d["loads_envelope"] if "loads_envelope" in d else False
     updates_optics_group = (
         d["updates_optics_group"] if "updates_optics_group" in d else False
@@ -1780,7 +1734,6 @@ def _dict_to_options(d: dict[str, Any]) -> _Options:
     pad_options = d["pad_options"] if "pad_options" in d else {}
     return _Options(
         loads_metadata=loads_metadata,
-        broadcasts_image_config=broadcasts_image_config,
         loads_envelope=loads_envelope,
         updates_optics_group=updates_optics_group,
         pad_options=pad_options,
