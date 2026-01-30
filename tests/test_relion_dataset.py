@@ -349,25 +349,11 @@ def test_load_starfile_wo_metadata(sample_starfile_path):
     assert not parameter_file.loads_metadata
 
 
-def test_load_optics_group_broadcasting(sample_starfile_path):
+def test_load_image_config_broadcasting(sample_starfile_path):
     """Test loading a starfile with optics group."""
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
-        options=dict(
-            loads_envelope=False, loads_metadata=True,
-        ),
-    )
-
-    parameters = parameter_file[:]
-    image_config = parameters["image_config"]
-    assert image_config.voltage_in_kilovolts.ndim > 0
-    assert image_config.pixel_size.ndim > 0
-
-    parameter_file = RelionParticleParameterFile(
-        path_to_starfile=sample_starfile_path,
-        options=dict(
-            loads_envelope=False, loads_metadata=True
-        ),
+        options=dict(loads_envelope=False, loads_metadata=True),
     )
     parameters = parameter_file[:]
     image_config = parameters["image_config"]
@@ -401,9 +387,7 @@ def test_load_starfile_vs_mrcs_shape(sample_starfile_path, sample_relion_project
     """Test loading a starfile with mrcs."""
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
-        options=dict(
-            loads_envelope=False, loads_metadata=False
-        ),
+        options=dict(loads_envelope=False, loads_metadata=False),
     )
     dataset = RelionParticleDataset(parameter_file, sample_relion_project_path)
 
