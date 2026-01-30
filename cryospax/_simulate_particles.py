@@ -4,7 +4,7 @@ from typing import Any, TypeVar
 import equinox as eqx
 import jax
 import numpy as np
-from cryojax.jax_util import NDArrayLike, filter_bscan
+from cryojax.jax_util import NDArrayLike, filter_bscan, make_filter_spec
 from jaxtyping import Array, Float, Int, PyTree
 
 from ._dataset import AbstractParticleDataset, AbstractParticleParameterFile
@@ -265,7 +265,16 @@ def _configure_simulation_fn(
     else:
         batch_size = min(images_per_file, batch_size)
         compute_vmap = eqx.filter_vmap(
-            simulate_fn, in_axes=(eqx.if_array(0), None, eqx.if_array(0))
+            simulate_fn,
+            in_axes=(
+                dict(
+                    pose=eqx.if_array(0),
+                    transfer_theory=eqx.if_array(0),
+                    image_config=None,
+                ),
+                None,
+                eqx.if_array(0),
+            ),
         )
         if batch_size == images_per_file:
             simulate_batch_fn = eqx.filter_jit(compute_vmap)
@@ -274,14 +283,24 @@ def _configure_simulation_fn(
             @eqx.filter_jit
             def simulate_batch_fn(parameter_info, constant_args, per_particle_args):
                 # Compute with `jax.lax.scan` via `cryojax.jax_util.filter_bscan`
-                init = constant_args
-                xs = (parameter_info, per_particle_args)
+                filter_spec = make_filter_spec(
+                    parameter_info, where=lambda x: (x["pose"], x["transfer_theory"])
+                )
+                param_map, param_constant = eqx.partition(parameter_info, filter_spec=filter_spec)
+
+                init = (constant_args, param_constant)
+                xs = (
+                    param_map,
+                    per_particle_args,
+                )
 
                 def f_scan(carry, xs):
-                    _constant_args = carry
-                    _parameter_info, _per_particle_args = xs
+                    _constant_args, _param_constant = carry
+                    _param_map, _per_particle_args = xs
                     image_stack = compute_vmap(
-                        _parameter_info, _constant_args, _per_particle_args
+                        eqx.combine(_param_map, _param_constant),
+                        _constant_args,
+                        _per_particle_args,
                     )
                     return carry, image_stack
 

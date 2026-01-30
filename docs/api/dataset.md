@@ -40,7 +40,6 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
                 - starfile_data
                 - loads_metadata
                 - loads_envelope
-                - broadcasts_image_config
                 - updates_optics_group
                 - rotation_convention
 
@@ -61,7 +60,6 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
             - mode
             - loads_metadata
             - loads_envelope
-            - broadcasts_image_config
             - updates_optics_group
             - rotation_convention
 

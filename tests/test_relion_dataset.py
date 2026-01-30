@@ -354,7 +354,7 @@ def test_load_optics_group_broadcasting(sample_starfile_path):
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
         options=dict(
-            loads_envelope=False, loads_metadata=True, broadcasts_image_config=True
+            loads_envelope=False, loads_metadata=True,
         ),
     )
 
@@ -362,19 +362,17 @@ def test_load_optics_group_broadcasting(sample_starfile_path):
     image_config = parameters["image_config"]
     assert image_config.voltage_in_kilovolts.ndim > 0
     assert image_config.pixel_size.ndim > 0
-    assert parameter_file.broadcasts_image_config is True
 
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
         options=dict(
-            loads_envelope=False, loads_metadata=True, broadcasts_image_config=False
+            loads_envelope=False, loads_metadata=True
         ),
     )
     parameters = parameter_file[:]
     image_config = parameters["image_config"]
     assert image_config.voltage_in_kilovolts.ndim == 0
     assert image_config.pixel_size.ndim == 0
-    assert parameter_file.broadcasts_image_config is False
 
     return
 
@@ -385,7 +383,6 @@ def test_parameter_file_setters(sample_starfile_path):
         options=dict(
             loads_envelope=False,
             loads_metadata=False,
-            broadcasts_image_config=False,
             updates_optics_group=False,
         ),
     )
@@ -396,9 +393,6 @@ def test_parameter_file_setters(sample_starfile_path):
     parameter_file.loads_envelope = True
     assert parameter_file.loads_envelope
 
-    parameter_file.broadcasts_image_config = True
-    assert parameter_file.broadcasts_image_config
-
     parameter_file.updates_optics_group = True
     assert parameter_file.updates_optics_group
 
@@ -408,7 +402,7 @@ def test_load_starfile_vs_mrcs_shape(sample_starfile_path, sample_relion_project
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
         options=dict(
-            loads_envelope=False, loads_metadata=False, broadcasts_image_config=False
+            loads_envelope=False, loads_metadata=False
         ),
     )
     dataset = RelionParticleDataset(parameter_file, sample_relion_project_path)
