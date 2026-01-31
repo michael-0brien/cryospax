@@ -4,7 +4,7 @@ from typing import Any, TypeVar
 import equinox as eqx
 import jax
 import numpy as np
-from cryojax.jax_util import NDArrayLike, filter_bscan
+from cryojax.jax_util import NDArrayLike, filter_bscan, make_filter_spec
 from jaxtyping import Array, Float, Int, PyTree
 
 from ._dataset import AbstractParticleDataset, AbstractParticleParameterFile
@@ -143,7 +143,9 @@ def simulate_particle_stack(
 
     - `dataset`:
         The [`cryospax.AbstractParticleDataset`][] class.
-        Note that this must be passed in *writing mode*, i.e. `mode = 'w'`.
+        Note that this must be passed in *writing mode*, i.e. `mode = 'w'`,
+        and the `parameter_file` must be instantiated with
+        `options=dict(loads_metadata=False, ...)`, which is the default.
     - `simulate_fn`:
         A callable that computes the image stack from the parameters contained
         in the STAR file.
@@ -171,6 +173,13 @@ def simulate_particle_stack(
             "Found that the `dataset` was in reading mode "
             "(`mode = 'r'`), but this must be instantiated in "
             "writing mode (`mode = 'w'`)."
+        )
+    if dataset.parameter_file.loads_metadata:
+        raise ValueError(
+            "Found that the `dataset.parameter_file` was "
+            "instantiated with `loads_metadata = True`, but "
+            "this must be set to `False` when simulating "
+            "particles. Otherwise a JAX error will occur."
         )
     n_particles = len(dataset)
     images_per_file = n_particles if images_per_file is None else images_per_file
@@ -245,8 +254,12 @@ def _configure_simulation_fn(
     if batch_size is None:
 
         def simulate_batch_fn(parameter_info, constant_args, per_particle_args):  # type: ignore
+            filter_spec = make_filter_spec(
+                parameter_info, where=lambda x: (x["pose"], x["transfer_theory"])
+            )
+
             parameter_info_at_0, per_particle_args_at_0 = (
-                _index_pytree(0, parameter_info),
+                _index_pytree(0, parameter_info, filter_spec=filter_spec),
                 _index_pytree(0, per_particle_args),
             )
             shape = _determine_output_shape(
@@ -254,7 +267,9 @@ def _configure_simulation_fn(
             )
             image_stack = np.empty((images_per_file, *shape))
             for i in range(images_per_file):
-                parameter_info_at_i = _index_pytree(i, parameter_info)
+                parameter_info_at_i = _index_pytree(
+                    i, parameter_info, filter_spec=filter_spec
+                )
                 per_particle_args_at_i = _index_pytree(i, per_particle_args)
                 image = simulate_fn(
                     parameter_info_at_i, constant_args, per_particle_args_at_i
@@ -265,7 +280,16 @@ def _configure_simulation_fn(
     else:
         batch_size = min(images_per_file, batch_size)
         compute_vmap = eqx.filter_vmap(
-            simulate_fn, in_axes=(eqx.if_array(0), None, eqx.if_array(0))
+            simulate_fn,
+            in_axes=(
+                dict(
+                    pose=eqx.if_array(0),
+                    transfer_theory=eqx.if_array(0),
+                    image_config=None,
+                ),
+                None,
+                eqx.if_array(0),
+            ),
         )
         if batch_size == images_per_file:
             simulate_batch_fn = eqx.filter_jit(compute_vmap)
@@ -274,14 +298,26 @@ def _configure_simulation_fn(
             @eqx.filter_jit
             def simulate_batch_fn(parameter_info, constant_args, per_particle_args):
                 # Compute with `jax.lax.scan` via `cryojax.jax_util.filter_bscan`
-                init = constant_args
-                xs = (parameter_info, per_particle_args)
+                filter_spec = make_filter_spec(
+                    parameter_info, where=lambda x: (x["pose"], x["transfer_theory"])
+                )
+                param_map, param_constant = eqx.partition(
+                    parameter_info, filter_spec=filter_spec
+                )
+
+                init = (constant_args, param_constant)
+                xs = (
+                    param_map,
+                    per_particle_args,
+                )
 
                 def f_scan(carry, xs):
-                    _constant_args = carry
-                    _parameter_info, _per_particle_args = xs
+                    _constant_args, _param_constant = carry
+                    _param_map, _per_particle_args = xs
                     image_stack = compute_vmap(
-                        _parameter_info, _constant_args, _per_particle_args
+                        eqx.combine(_param_map, _param_constant),
+                        _constant_args,
+                        _per_particle_args,
                     )
                     return carry, image_stack
 
@@ -293,9 +329,11 @@ def _configure_simulation_fn(
 
 
 def _index_pytree(
-    index: int | Int[np.ndarray, ""] | Int[np.ndarray, " _"], pytree: T
+    index: int | Int[np.ndarray, ""] | Int[np.ndarray, " _"],
+    pytree: T,
+    filter_spec: Any = eqx.is_array,
 ) -> T:
-    dynamic, static = eqx.partition(pytree, eqx.is_array)
+    dynamic, static = eqx.partition(pytree, filter_spec)
     dynamic_at_index = jax.tree.map(lambda x: x[index], dynamic)
     return eqx.combine(dynamic_at_index, static)
 
