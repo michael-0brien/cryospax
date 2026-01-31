@@ -58,7 +58,7 @@ def relion_parameters():
         shape=(4, 4),
         pixel_size=1.5,
         voltage_in_kilovolts=300.0,
-        pad_options=dict(mode="constant", shape=(14, 14)),
+        padded_shape=(14, 14),
     )
 
     pose = cxs.EulerAnglePose()
@@ -155,23 +155,23 @@ class TestErrorRaisingForLoading:
             )
 
 
-def test_pad_options(sample_starfile_path):
-    """Test the pad_options argument to the parameter file."""
+def test_make_image_config(sample_starfile_path):
+    """Test the `make_image_config` argument to the parameter
+    file."""
     # Test with a valid input
 
-    pad_options = dict(shape=(22, 22))
+    make_fn = lambda s, ps, v: cxs.BasicImageConfig(s, ps, v, padded_shape=(22, 22))
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
-        options=dict(loads_envelope=True, loads_metadata=True, pad_options=pad_options),
+        options=dict(
+            loads_envelope=True,
+            loads_metadata=True,
+            make_image_config=make_fn,
+        ),
     )
     image_config = parameter_file[0]["image_config"]
 
-    ref_config = cxs.BasicImageConfig(
-        shape=(16, 16),
-        pixel_size=12.0,
-        voltage_in_kilovolts=300.0,
-        pad_options=pad_options,
-    )
+    ref_config = make_fn((16, 16), 12.0, 300.0)
     assert image_config.shape == ref_config.shape
     assert image_config.pixel_size == np.asarray(ref_config.pixel_size)
     assert image_config.voltage_in_kilovolts == np.asarray(
