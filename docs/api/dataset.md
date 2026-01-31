@@ -10,6 +10,12 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
                 - __len__
                 - __getitem__
 
+---
+
+Datasets output a pytree that can be passed the JAX transformations. A particular challenge is passing these pytrees to `jax.vmap`; different cryoSPAX datasets may load different pytrees, and each pytree may have different arrays which are broadcasted.
+
+::: cryospax.get_in_axes
+
 ## Reading/writing parameter files (e.g. STAR files)
 
 ??? abstract "`cryospax.AbstractParticleParameterFile`"
@@ -41,6 +47,7 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
                 - loads_metadata
                 - loads_envelope
                 - updates_optics_group
+                - make_image_config
                 - rotation_convention
 
 ::: cryospax.RelionParticleParameterFile
@@ -61,6 +68,7 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
             - loads_metadata
             - loads_envelope
             - updates_optics_group
+            - make_image_config
             - rotation_convention
 
 ## Datasets: parameter and image manipulation
