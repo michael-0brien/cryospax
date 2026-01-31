@@ -27,6 +27,7 @@ from cryojax.simulator import (
 from jaxtyping import Array, Float, Int
 
 from .._io import read_starfile, write_starfile
+from .._misc import filter_device_get
 from .base_dataset import AbstractParticleDataset, AbstractParticleParameterFile
 
 
@@ -78,6 +79,11 @@ RELION_SUPPORTED_PARTICLE_ENTRIES = [
 ]
 
 
+MakeImageConfig = Callable[
+    [tuple[int, int], np.ndarray | float, np.ndarray | float], BasicImageConfig
+]
+
+
 if hasattr(typing, "GENERATING_DOCUMENTATION"):
     _ParticleParameterInfo = dict[str, Any]  # pyright: ignore[reportAssignmentType]
     _ParticleStackInfo = dict[str, Any]  # pyright: ignore[reportAssignmentType]
@@ -111,7 +117,7 @@ else:
         loads_metadata: bool
         loads_envelope: bool
         updates_optics_group: bool
-        pad_options: dict[str, Any]
+        make_image_config: MakeImageConfig
 
     class _StarfileData(TypedDict):
         optics: pd.DataFrame
@@ -124,6 +130,18 @@ else:
         delimiter: str
         overwrite: bool
         compression: str | None
+
+
+def _default_make_image_config(shape, pixel_size, voltage_in_kilovolts):
+    """Default implementation for generating an `image_config`
+    from parameters and the image shape. Additional options passed
+    to `BasicImageConfig` may be desired.
+    """
+    return eqx.tree_at(
+        lambda x: (x.pixel_size, x.voltage_in_kilovolts),
+        BasicImageConfig(shape, 1.0, 1.0),
+        (pixel_size, voltage_in_kilovolts),
+    )
 
 
 class AbstractRelionParticleParameterFile(
@@ -194,6 +212,16 @@ class AbstractRelionParticleParameterFile(
     @updates_optics_group.setter
     @abc.abstractmethod
     def updates_optics_group(self, value: bool):
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def make_image_config(self) -> MakeImageConfig:
+        raise NotImplementedError
+
+    @make_image_config.setter
+    @abc.abstractmethod
+    def make_image_config(self, value: MakeImageConfig):
         raise NotImplementedError
 
 
@@ -267,10 +295,13 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                 If `True`, when re-writing STAR file entries via
                 `dataset[idx] = parameters` syntax, creates a new optics group entry.
                 By default, `False`.
-            - 'pad_options':
-                Padding options for image simulation, passed to the `BasicImageConfig`.
-                See `BasicImageConfig` for documentation.
-                By default, `{}`.
+            - 'make_image_config':
+                A function with signature
+                `fn(shape, pixel_size, voltage_in_kilovolts)` that
+                returns a [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/)
+                class. Use this argument when it is desired to customize the `image_config`
+                returned from this class, i.e.
+                `value = parameter_file[0:7]; print(value["image_config])`.
         """  # noqa: E501
         # Private attributes
         self._options = _dict_to_options(options)
@@ -316,7 +347,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             particle_data_at_index,
             optics_group,
             self.loads_envelope,
-            self._options["pad_options"],
+            self.make_image_config,
         )
         parameter_info = _ParticleParameterInfo(
             image_config=image_config, pose=pose, transfer_theory=transfer_theory
@@ -575,6 +606,14 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     def updates_optics_group(self, value: bool):
         self._options["updates_optics_group"] = value
 
+    @property
+    def make_image_config(self) -> MakeImageConfig:
+        return self._options["make_image_config"]
+
+    @make_image_config.setter
+    def make_image_config(self, value: MakeImageConfig):
+        self._options["make_image_config"] = value
+
 
 class RelionParticleDataset(
     AbstractParticleDataset[_ParticleStackInfo, _ParticleStackLike]
@@ -590,7 +629,7 @@ class RelionParticleDataset(
         mode: Literal["r", "w"] = "r",
         *,
         mrcfile_settings: dict[str, Any] = {},
-        just_images: bool = False,
+        only_images: bool = False,
     ):
         """**Arguments:**
 
@@ -631,7 +670,7 @@ class RelionParticleDataset(
                 for `n_characters = 5` and `prefix = 'f'`.
             - 'overwrite':
                 If `True`, overwrite existing MRC file path if it exists.
-        - `just_images`:
+        - `only_images`:
             If `False`, load parameters and images. Otherwise, load only images.
         """
         # Set properties. First, core properties of the dataset, starting
@@ -648,7 +687,7 @@ class RelionParticleDataset(
         # ... properties common to reading and writing images
         self._path_to_relion_project = pathlib.Path(path_to_relion_project)
         # ... properties for reading images
-        self._just_images = just_images
+        self._only_images = only_images
         # ... properties for writing images
         self._mrcfile_settings = _dict_to_mrcfile_settings(mrcfile_settings)
         # Now, initialize for `mode = 'r'` vs `mode = 'w'`
@@ -693,9 +732,9 @@ class RelionParticleDataset(
         - 'parameters':
             See [`cryospax.RelionParticleParameterFile`][] for more
             information. This key is not included if
-            `just_images = True`.
+            `only_images = True`.
         """  # noqa: E501
-        if not self.just_images:
+        if not self.only_images:
             # Load images and parameters. First, read parameters
             # and metadata from the STAR file
             loads_metadata = self.parameter_file.loads_metadata
@@ -950,22 +989,22 @@ class RelionParticleDataset(
         self._mrcfile_settings = _dict_to_mrcfile_settings(value)
 
     @property
-    def just_images(self) -> bool:
+    def only_images(self) -> bool:
         """If `True`, load images and *not* parameters. This gives
         better performance when it is not necessary to load parameters.
 
         ```python
-        dataset.just_images = True
+        dataset.only_images = True
         particle_info = dataset[0]
         assert "images" in particle_info  # True
         assert "parameters" not in particle_info  # True
         ```
         """
-        return self._just_images
+        return self._only_images
 
-    @just_images.setter
-    def just_images(self, value: bool):
-        self._just_images = value
+    @only_images.setter
+    def only_images(self, value: bool):
+        self._only_images = value
 
 
 def _load_starfile_data(
@@ -1085,7 +1124,7 @@ def _make_pytrees_from_starfile(
     particle_data,
     optics_data,
     loads_envelope,
-    pad_options,
+    make_image_config,
 ) -> tuple[BasicImageConfig, ContrastTransferTheory, EulerAnglePose]:
     float_dtype = jax.dtypes.canonicalize_dtype(float)
     # Load CTF parameters. First from particle data
@@ -1209,8 +1248,8 @@ def _make_pytrees_from_starfile(
         # First, create the `BasicImageConfig`
         image_size = int(optics_data["rlnImageSize"])
         image_shape = (image_size, image_size)
-        image_config = _make_config(
-            image_shape, pixel_size, voltage_in_kilovolts, pad_options
+        image_config = filter_device_get(
+            make_image_config(image_shape, pixel_size, voltage_in_kilovolts)
         )
         # ... now the `ContrastTransferTheory`
         envelope = (
@@ -1228,19 +1267,6 @@ def _make_pytrees_from_starfile(
     image_config, transfer_theory, pose = eqx.combine(pytree_dynamic, pytree_static)
 
     return image_config, transfer_theory, pose
-
-
-def _make_config(
-    image_shape,
-    pixel_size,
-    voltage_in_kilovolts,
-    pad_options,
-):
-    return eqx.tree_at(
-        lambda x: (x.pixel_size, x.voltage_in_kilovolts),
-        BasicImageConfig(image_shape, 1.0, 1.0, pad_options=pad_options),
-        (pixel_size, voltage_in_kilovolts),
-    )
 
 
 def _make_pose(offset_x, offset_y, phi, theta, psi):
@@ -1726,17 +1752,32 @@ def _dict_to_mrcfile_settings(d: dict[str, Any]) -> _MrcfileSettings:
 
 
 def _dict_to_options(d: dict[str, Any]) -> _Options:
+    _options_keys = {
+        "loads_metadata",
+        "loads_envelope",
+        "updates_optics_group",
+        "make_image_config",
+    }
+    if not set(d.keys()).issubset(_options_keys):
+        raise ValueError(
+            "Expected that dictionary `options` passed to "
+            "`RelionParticleParameterFile(..., options=...)` "
+            f"had a subset of keys {_options_keys}, but found that it "
+            f"had keys {set(d.keys())}."
+        )
     loads_metadata = d["loads_metadata"] if "loads_metadata" in d else False
     loads_envelope = d["loads_envelope"] if "loads_envelope" in d else False
     updates_optics_group = (
         d["updates_optics_group"] if "updates_optics_group" in d else False
     )
-    pad_options = d["pad_options"] if "pad_options" in d else {}
+    make_image_config = (
+        d["make_image_config"] if "make_image_config" in d else _default_make_image_config
+    )
     return _Options(
         loads_metadata=loads_metadata,
         loads_envelope=loads_envelope,
         updates_optics_group=updates_optics_group,
-        pad_options=pad_options,
+        make_image_config=make_image_config,
     )
 
 
