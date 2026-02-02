@@ -42,7 +42,6 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
                 - loads_envelope
                 - updates_optics_group
                 - make_image_config
-                - rotation_convention
 
 ::: cryospax.RelionParticleParameterFile
     options:
@@ -63,7 +62,6 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
             - loads_envelope
             - updates_optics_group
             - make_image_config
-            - rotation_convention
 
 ## Datasets: parameter and image manipulation
 
