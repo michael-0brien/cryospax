@@ -13,23 +13,29 @@ def get_in_axes(dataset: AbstractDataset) -> PyTree:
     this function returns a prefix pytree for input to `eqx.filter_vmap`.
 
     !!! example
+        ```python
         import cryospax as spx
 
         dataset = RelionParticleDataset(...)
-        in_axes = spx.get_in_axes(dataset)
 
-        @eqx.filter_vmap(in_axes=(in_axes, None))
+        @eqx.filter_vmap(in_axes=(spx.get_in_axes(dataset), None))
         def fn_vmap(particle_info, args):
             ...
 
         particle_info = dataset[0:10]
         args = ...  # other arguments to `fn_vmap`
         out = fn_vmap(particle_info, args)
+        ```
 
     **Arguments:**
 
     - `dataset`:
         A [`cryospax.AbstractDataset`][].
+
+    **Returns:**
+
+    The `in_axes` argument for `equinox.filter_vmap` for the output
+    of `dataset[...]`.
     """
     raise NotImplementedError(
         "`cryospax.get_in_axes` not implemented for "
