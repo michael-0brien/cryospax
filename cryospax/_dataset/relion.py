@@ -608,6 +608,10 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
 
     @property
     def make_image_config(self) -> MakeImageConfig:
+        """A function that returns a
+        [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/)
+        with signature `make_image_config(shape, pixel_size, voltage_in_kilovolts)`.
+        """  # noqa: E501
         return self._options["make_image_config"]
 
     @make_image_config.setter
