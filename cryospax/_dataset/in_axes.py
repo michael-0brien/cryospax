@@ -44,7 +44,7 @@ def _(dataset):
             f"Passed class `dataset = {dataset.__class__.__name__}(...)` "
             "to `cryospax.get_in_axes(dataset)`, but found that "
             "`dataset.loads_metadata = True`. This is not supported "
-            "as the output of `dataset` will not be able to pass through "
+            "as the output of `dataset[...]` will not be able to pass through "
             "calls to `jax.vmap`."
         )
     return _get_rln_in_axes()
