@@ -158,7 +158,7 @@ def test_write_single_image(sample_starfile_path):
         return image / jnp.linalg.norm(image)
 
     selection_filter = {
-        "rlnImageName": lambda x: np.where(x == "0000001@000000.mrcs", True, False)
+        "rlnImageName": lambda x: np.where(x == "0000001@img_00000.mrcs", True, False)
     }
     """Test writing a simulated image stack from a starfile."""
     parameter_file = RelionParticleParameterFile(
