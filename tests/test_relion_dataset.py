@@ -418,9 +418,9 @@ def test_no_load_parameters(sample_starfile_path, sample_relion_project_path):
     dataset = RelionParticleDataset(parameter_file, sample_relion_project_path)
 
     # For particle stack with leading dim
-    dataset.just_images = False
+    dataset.only_images = False
     particle_stack_params = dataset[:]
-    dataset.just_images = True
+    dataset.only_images = True
     particle_stack_noparams = dataset[:]
 
     assert "parameters" not in particle_stack_noparams
@@ -430,9 +430,9 @@ def test_no_load_parameters(sample_starfile_path, sample_relion_project_path):
     assert isinstance(particle_stack_params["images"], np.ndarray)
 
     # For particle stack with no leading dim
-    dataset.just_images = False
+    dataset.only_images = False
     particle_stack_params = dataset[0]
-    dataset.just_images = True
+    dataset.only_images = True
     particle_stack_noparams = dataset[0]
     assert (
         particle_stack_params["images"].shape == particle_stack_noparams["images"].shape
@@ -775,7 +775,7 @@ def test_write_image(
     with pytest.raises(IOError):
         dataset[0] = particle
 
-    dataset.mrcfile_settings = dict(prefix="f", overwrite=True)
+    dataset.mrcfile_options = dict(prefix="f", overwrite=True)
     dataset[0] = particle
 
     starfile_data = dataset.parameter_file.starfile_data
@@ -980,7 +980,7 @@ def test_raise_errors_stack_dataset(sample_starfile_path, sample_relion_project_
         parameter_file,
         path_to_relion_project="tests/outputs/starfile_writing/",
         mode="w",
-        mrcfile_settings={"overwrite": False},
+        mrcfile_options={"overwrite": False},
     )
 
     parameters = parameter_file[0]
@@ -1051,7 +1051,7 @@ def test_append_relion_stack_dataset():
         new_parameters_file,
         path_to_relion_project="tests/outputs/starfile_writing/",
         mode="w",
-        mrcfile_settings={"overwrite": False},
+        mrcfile_options={"overwrite": False},
     )
 
     n_images = 10

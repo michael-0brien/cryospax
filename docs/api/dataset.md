@@ -77,6 +77,7 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
                 - parameter_file
                 - write_images
                 - mode
+                - only_images
 
 ::: cryospax.RelionParticleDataset
     options:
@@ -91,7 +92,7 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
             - parameter_file
             - path_to_relion_project
             - mrcfile_settings
-            - just_images
+            - only_images
 
 ## Basic I/O
 
