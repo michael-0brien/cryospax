@@ -412,7 +412,7 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
         )
 
 
-class CryoSparcParticleStackDataset(
+class CryoSparcParticleDataset(
     AbstractParticleDataset[_ParticleStackInfo, _ParticleStackLike]
 ):
     """A dataset that wraps a CryoSPARC particle stack in
@@ -547,13 +547,13 @@ class CryoSparcParticleStackDataset(
         self, index: int | slice | Int[np.ndarray, ""], value: _ParticleStackLike
     ):
         raise NotImplementedError(
-            "CryoSparcParticleStackDataset does not have a __setitem__ method"
+            "CryoSparcParticleDataset does not have a __setitem__ method"
         )
 
     @override
     def append(self, value: _ParticleStackLike):
         raise NotImplementedError(
-            "append is not supported for CryoSparcParticleStackDataset"
+            "append is not supported for CryoSparcParticleDataset"
         )
 
     @override
@@ -564,7 +564,7 @@ class CryoSparcParticleStackDataset(
         parameters: _ParticleParameterLike | None = None,
     ):
         raise NotImplementedError(
-            "writing images is not supported for CryoSparcParticleStackDataset"
+            "writing images is not supported for CryoSparcParticleDataset"
         )
 
     @override
