@@ -552,9 +552,7 @@ class CryoSparcParticleDataset(
 
     @override
     def append(self, value: _ParticleStackLike):
-        raise NotImplementedError(
-            "append is not supported for CryoSparcParticleDataset"
-        )
+        raise NotImplementedError("append is not supported for CryoSparcParticleDataset")
 
     @override
     def write_images(

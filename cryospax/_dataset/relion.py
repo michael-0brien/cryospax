@@ -112,10 +112,10 @@ else:
 
         images: Float[np.ndarray, "... y_dim x_dim"]
         parameters: NotRequired[_ParticleParameterInfo]
+
     class _StarfileData(TypedDict):
         optics: pd.DataFrame
         particles: pd.DataFrame
-
 
     _ParticleParameterLike = dict[str, Any] | _ParticleParameterInfo
     _ParticleStackLike = dict[str, Any] | _ParticleStackInfo
