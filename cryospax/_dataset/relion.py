@@ -96,6 +96,7 @@ if hasattr(typing, "GENERATING_DOCUMENTATION"):
     _MrcfileSettings = dict[str, Any]  # pyright: ignore[reportAssignmentType]
 
 else:
+    from .common import _MrcfileSettings
 
     class _ParticleParameterInfo(TypedDict):
         """Parameters for a particle stack from RELION."""
@@ -114,24 +115,6 @@ else:
 
     _ParticleParameterLike = dict[str, Any] | _ParticleParameterInfo
     _ParticleStackLike = dict[str, Any] | _ParticleStackInfo
-
-    class _Options(TypedDict):
-        loads_metadata: bool
-        loads_envelope: bool
-        updates_optics_group: bool
-        make_image_config: MakeImageConfig
-
-    class _StarfileData(TypedDict):
-        optics: pd.DataFrame
-        particles: pd.DataFrame
-
-    class _MrcfileSettings(TypedDict):
-        prefix: str
-        output_folder: str | pathlib.Path
-        n_characters: int
-        delimiter: str
-        overwrite: bool
-        compression: str | None
 
 
 def _default_make_image_config(shape, pixel_size, voltage_in_kilovolts):

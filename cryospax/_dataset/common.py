@@ -1,6 +1,7 @@
+import pathlib
 import warnings
 from collections.abc import Callable
-from typing import Literal, TypedDict
+from typing import Any, Literal, TypedDict
 
 import equinox as eqx
 import numpy as np
@@ -11,6 +12,22 @@ from cryojax.simulator import AstigmaticCTF, BasicImageConfig, ContrastTransferT
 MakeImageConfig = Callable[
     [tuple[int, int], np.ndarray | float, np.ndarray | float], BasicImageConfig
 ]
+
+
+class _Options(TypedDict):
+    loads_metadata: bool
+    loads_envelope: bool
+    updates_optics_group: bool
+    make_image_config: MakeImageConfig
+
+
+class _MrcfileSettings(TypedDict):
+    prefix: str
+    output_folder: str | pathlib.Path
+    n_characters: int
+    delimiter: str
+    overwrite: bool
+    compression: str | None
 
 
 def _default_make_image_config(shape, pixel_size, voltage_in_kilovolts):
@@ -134,5 +151,3 @@ def _make_transfer_theory(defocus, astig, angle, sph, ac, ps, env=None):
     return eqx.tree_at(
         lambda x: (x.amplitude_contrast_ratio, x.phase_shift), transfer_theory, (ac, ps)
     )
-
-
