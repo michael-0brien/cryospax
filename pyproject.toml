@@ -21,7 +21,7 @@ urls = {repository = "https://github.com/michael-0brien/cryospax" }
 dynamic = ["version"]
 
 dependencies = [
-    "cryojax>=0.5.3",
+    "cryojax>0.5.2",
     "starfile",
     "pandas",
 ]
