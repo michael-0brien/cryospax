@@ -54,6 +54,8 @@ Datasets output a pytree that can be passed the JAX transformations. A particula
         group_by_category: false
         members:
             - __init__
+            - load
+            - empty
             - __getitem__
             - __setitem__
             - __len__
@@ -90,6 +92,8 @@ Datasets output a pytree that can be passed the JAX transformations. A particula
         group_by_category: false
         members:
             - __init__
+            - load
+            - empty
             - __getitem__
             - __setitem__
             - __len__
