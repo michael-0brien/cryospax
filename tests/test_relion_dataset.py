@@ -369,7 +369,6 @@ def test_parameter_file_setters(sample_starfile_path):
         options=dict(
             loads_envelope=False,
             loads_metadata=False,
-            updates_optics_group=False,
         ),
     )
 
@@ -378,9 +377,6 @@ def test_parameter_file_setters(sample_starfile_path):
 
     parameter_file.loads_envelope = True
     assert parameter_file.loads_envelope
-
-    parameter_file.updates_optics_group = True
-    assert parameter_file.updates_optics_group
 
 
 def test_load_starfile_vs_mrcs_shape(sample_starfile_path, sample_relion_project_path):

@@ -73,6 +73,7 @@ Datasets output a pytree that can be passed the JAX transformations. A particula
             - loads_envelope
             - updates_optics_group
             - make_image_config
+            - extract_metadata
 
 ## Datasets: parameter and image manipulation
 

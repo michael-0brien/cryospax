@@ -220,6 +220,29 @@ class AbstractRelionParticleParameterFile(
     def make_image_config(self, value: MakeImageConfig):
         raise NotImplementedError
 
+    def extract_metadata(
+        self, index: int | slice | Int[np.ndarray, ""] | Int[np.ndarray, " _"]
+    ) -> pd.DataFrame:
+        """Extract the columns at a given `index` *not* included in the cryoJAX
+        classes loaded when calling `parameter_info = parameter_file[index]`.
+
+        This method is for advanced usage; prefer setting
+        `parameter_file.loads_metadata = True` and accessing this as
+        `parameter_info = parameter_file[...]; metadata = parameter_info["metadata"]`.
+        """
+        particle_data_at_index = self.starfile_data["particles"].iloc[index]
+        # ... convert to dataframe for serialization
+        if isinstance(particle_data_at_index, pd.Series):
+            particle_data_at_index = particle_data_at_index.to_frame().T
+        # ... no overlapping keys with loaded pytrees
+        redundant_entry_labels, _ = list(zip(*RELION_SUPPORTED_PARTICLE_ENTRIES))
+        columns = particle_data_at_index.columns
+        remove_columns = [
+            column for column in columns if column in redundant_entry_labels
+        ]
+        metadata = particle_data_at_index.drop(remove_columns, axis="columns")
+        return metadata
+
 
 class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     """A dataset that wraps a RELION particle stack in
@@ -425,17 +448,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             image_config=image_config, pose=pose, transfer_theory=transfer_theory
         )
         if self.loads_metadata:
-            # ... convert to dataframe for serialization
-            if isinstance(particle_data_at_index, pd.Series):
-                particle_data_at_index = particle_data_at_index.to_frame().T
-            # ... no overlapping keys with loaded pytrees
-            redundant_entry_labels, _ = list(zip(*RELION_SUPPORTED_PARTICLE_ENTRIES))
-            columns = particle_data_at_index.columns
-            remove_columns = [
-                column for column in columns if column in redundant_entry_labels
-            ]
-            metadata = particle_data_at_index.drop(remove_columns, axis="columns")
-            parameter_info["metadata"] = metadata
+            parameter_info["metadata"] = self.extract_metadata(index)
 
         return parameter_info
 
@@ -943,17 +956,14 @@ class RelionParticleDataset(
         if not self.only_images:
             # Load images and parameters. First, read parameters
             # and metadata from the STAR file
-            loads_metadata = self.parameter_file.loads_metadata
-            self.parameter_file.loads_metadata = True
             # ... read parameters
             parameters = self.parameter_file[index]
-            # ... validate the metadata
-            particle_data_at_index = parameters["metadata"]
+            # ... and the metadata
+            if self.parameter_file.loads_metadata:
+                particle_data_at_index = parameters["metadata"]
+            else:
+                particle_data_at_index = self.parameter_file.extract_metadata(index)
             _validate_rln_image_name_exists(particle_data_at_index, index)
-            # ... reset boolean to original value
-            self.parameter_file.loads_metadata = loads_metadata
-            if not loads_metadata:
-                del parameters["metadata"]
             # ... grab shape
             shape = parameters["image_config"].shape
             # ... load stack of images
