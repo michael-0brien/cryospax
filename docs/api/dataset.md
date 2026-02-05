@@ -48,6 +48,8 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
         group_by_category: false
         members:
             - __init__
+            - load
+            - empty
             - __getitem__
             - __setitem__
             - __len__
@@ -84,6 +86,8 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
         group_by_category: false
         members:
             - __init__
+            - load
+            - empty
             - __getitem__
             - __setitem__
             - __len__

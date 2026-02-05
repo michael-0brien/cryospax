@@ -7,9 +7,10 @@ import typing
 import warnings
 from collections.abc import Callable
 from typing import Any, Literal, TypedDict
-from typing_extensions import NotRequired, override
+from typing_extensions import NotRequired, Self, override
 
 import equinox as eqx
+import equinox.internal as eqxi
 import jax
 import jax.numpy as jnp
 import mrcfile
@@ -144,6 +145,11 @@ def _default_make_image_config(shape, pixel_size, voltage_in_kilovolts):
     )
 
 
+default_make_image_config = eqxi.doc_repr(
+    _default_make_image_config, "default_make_image_config"
+)
+
+
 class AbstractRelionParticleParameterFile(
     AbstractParticleParameterFile[_ParticleParameterInfo, _ParticleParameterLike]
 ):
@@ -241,9 +247,9 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
 
         Whether or not this correction should be made depends on if the pose
         represents a rotation of the *object* or the *frame*. This is encoded
-        by the cryoJAX volume representation `volume.rotation_convention`
-        metadata. When this is equal to `'frame'` and *not* using `make_image_model`,
-        call `pose.to_inverse_rotation` to match with RELION.
+        by the cryoJAX volume representation metadata `volume.rotation_convention`.
+        When this is equal to `'frame'` and *not* using `make_image_model`,
+        call `pose.to_inverse_rotation()` to match with RELION.
     """  # noqa: E501
 
     def __init__(
@@ -251,8 +257,13 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         path_to_starfile: str | pathlib.Path,
         mode: Literal["r", "w"] = "r",
         *,
+        # For `mode = 'r'
+        selection_filter: dict[str, Callable] = {},
+        # For `mode = 'w'
         exist_ok: bool = False,
-        selection_filter: dict[str, Callable] | None = None,
+        num_particles: int = 0,
+        # For either 'r' or 'w', but may apply more
+        # to one or the other
         options: dict[str, Any] = {},
     ):
         """**Arguments:**
@@ -260,7 +271,6 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         - `path_to_starfile`:
             The path to the RELION STAR file. If the path does not exist
             and `mode = 'w'`, an empty dataset will be created.
-        - `path_to_relion_project`: The path to the RELION project directory.
         - `mode`:
             - If `mode = 'w'`, the dataset is prepared to write new
             *parameters*. This is done by storing an empty dataset in
@@ -268,9 +278,6 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             already exists at `path_to_starfile`, set `exist_ok = True`.
             - If `mode = 'r'`, the STAR file at `path_to_starfile` is read
             into `RelionParticleParameterFile.starfile_data`.
-        - `exist_ok`:
-            If the `path_to_starfile` already exists, if `True` and `mode = 'w'`
-            nonetheless stores an empty `RelionParticleParameterFile.starfile_data`.
         - `selection_filter`:
             A dictionary used to include only particular dataset elements.
             The keys of this dictionary should be any data entry in the STAR
@@ -278,8 +285,15 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             column and returns a boolean mask for the column. For example,
             filter by class using
             `selection_filter["rlnClassNumber"] = lambda x: x == 0`.
+        - `exist_ok`:
+            If the `path_to_starfile` already exists, if `True` and `mode = 'w'`
+            nonetheless stores an empty `RelionParticleParameterFile.starfile_data`.
+        - `num_particles`:
+            If in `mode = 'w'`, initialize STAR file data to be `num_particles`
+            entries. These entries are filled with NaN values and must be set
+            via `parameter_file[index] = parameter_info` syntax.
         - `options`:
-            A dictionary of options for modifying the behavior of loading/writing.
+            A dictionary of options for modifying the behavior of reading/writing.
             - 'loads_metadata':
                 If `True`, the resulting dict loads
                 the raw metadata from the STAR file that is not otherwise included
@@ -291,10 +305,6 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                 If `True`, read in the parameters of the CTF envelope function, i.e.
                 "rlnCtfScalefactor" and "rlnCtfBfactor".
                 By default, `False`.
-            - 'updates_optics_group':
-                If `True`, when re-writing STAR file entries via
-                `dataset[idx] = parameters` syntax, creates a new optics group entry.
-                By default, `False`.
             - 'make_image_config':
                 A function with signature
                 `fn(shape, pixel_size, voltage_in_kilovolts)` that
@@ -302,6 +312,10 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                 class. Use this argument when it is desired to customize the `image_config`
                 returned from this class, i.e.
                 `value = parameter_file[0:7]; print(value["image_config])`.
+            - 'updates_optics_group':
+                If `True`, when re-writing STAR file entries via
+                `parameter_file[index] = parameter_info` syntax, creates a
+                new optics group entry. By default, `True`.
         """  # noqa: E501
         # Private attributes
         self._options = _dict_to_options(options)
@@ -309,7 +323,55 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         # The STAR file data
         self._path_to_starfile = pathlib.Path(path_to_starfile)
         self._starfile_data = _load_starfile_data(
-            self._path_to_starfile, selection_filter, mode, exist_ok
+            self._path_to_starfile, mode, selection_filter, exist_ok, num_particles
+        )
+
+    @classmethod
+    def empty(
+        cls: type[Self],
+        path_to_starfile: str | pathlib.Path,
+        *,
+        exist_ok: bool = False,
+        num_particles: int = 0,
+        updates_optics_group: bool = True,
+    ) -> Self:
+        """Convenience wrapper for
+        [`cryospax.RelionParticleParameterFile.__init__`][] using
+        arguments relevant for `mode = 'w'` and writing parameters
+        via `parameter_file[index] = parameter_info`.
+        """
+        return cls(
+            path_to_starfile,
+            mode="w",
+            exist_ok=exist_ok,
+            num_particles=num_particles,
+            options={"updates_optics_group": updates_optics_group},
+        )
+
+    @classmethod
+    def load(
+        cls: type[Self],
+        path_to_starfile: str | pathlib.Path,
+        *,
+        selection_filter: dict[str, Callable] = {},
+        loads_metadata: bool = False,
+        loads_envelope: bool = False,
+        make_image_config: MakeImageConfig = default_make_image_config,
+    ) -> Self:
+        """Convenience wrapper for
+        [`cryospax.RelionParticleParameterFile.__init__`][] using
+        arguments relevant for `mode = 'r'` and reading parameters
+        via `parameter_info = parameter_file[index]`
+        """
+        return cls(
+            path_to_starfile,
+            mode="r",
+            selection_filter=selection_filter,
+            options={
+                "loads_metadata": loads_metadata,
+                "loads_envelope": loads_envelope,
+                "make_image_config": make_image_config,
+            },
         )
 
     @override
@@ -381,15 +443,18 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         """Set STAR file entries with `parameter_file[...] = value` syntax,
         where `value` is a dictionary with keys:
 
-        - 'pose': The [`cryojax.simulator.EulerAnglePose`]()
-        - 'image_config': The [`cryojax.simulator.BasicImageConfig`]()
-        - 'transfer_theory': The [`cryojax.simulator.ContrastTransferTheory`]()
+        - 'pose':
+            The [`cryojax.simulator.EulerAnglePose`](https://michael-0brien.github.io/cryojax/api/simulator/pose/#cryojax.simulator.EulerAnglePose)
+        - 'image_config':
+            The [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/#cryojax.simulator.BasicImageConfig)
+        - 'transfer_theory':
+            The [`cryojax.simulator.ContrastTransferTheory`](https://michael-0brien.github.io/cryojax/api/simulator/transfer_theory/#cryojax.simulator.ContrastTransferTheory)
         - 'metadata':
             A `pandas.DataFrame` used to write custom entries to the STAR
             file. `len(metadata)` should be equal to the number of particles.
 
         All keys are optional.
-        """
+        """  # noqa: E501
         # Make sure index is valid
         n_rows = self.starfile_data["particles"].shape[0]
         _validate_dataset_index(type(self), index, n_rows)
@@ -430,12 +495,15 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         `parameter_file.append(value)` syntax, where `value` is
         a dictionary with keys:
 
-        - 'pose': The [`cryojax.simulator.EulerAnglePose`](). This key
-           is required.
-        - 'image_config': The [`cryojax.simulator.BasicImageConfig`](). This key
-           is required.
-        - 'transfer_theory': The [`cryojax.simulator.ContrastTransferTheory`]().
-           This key is required.
+        - 'pose':
+            The [`cryojax.simulator.EulerAnglePose`](https://michael-0brien.github.io/cryojax/api/simulator/pose/#cryojax.simulator.EulerAnglePose)
+            This key is required.
+        - 'image_config':
+            The [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/#cryojax.simulator.BasicImageConfig)
+            This key is required.
+        - 'transfer_theory':
+            The [`cryojax.simulator.ContrastTransferTheory`](https://michael-0brien.github.io/cryojax/api/simulator/transfer_theory/#cryojax.simulator.ContrastTransferTheory)
+            This key is required.
         - 'metadata':
             A `pandas.DataFrame` used to write custom entries to the STAR
             file. `len(metadata)` should be equal to the number of particles.
@@ -652,7 +720,8 @@ class RelionParticleDataset(
             - If `mode = 'r'`, images are read from the 'rlnImageName'
             stored in the `parameter_file.starfile_data`.
         - `mrcfile_options`:
-            A dictionary with the following keys:
+            A dictionary with options for MRC file writing. This accepts
+            the following keys:
             - 'prefix':
                 A `str` which acts as the prefix to the filenames. If this
                 is equal to `'img'`, then the filename for image stack 0 will
@@ -721,6 +790,69 @@ class RelionParticleDataset(
                     "To write images in a STAR file in a new RELION project, "
                     "set `mode = 'w'`."
                 )
+
+    @classmethod
+    def empty(
+        cls: type[Self],
+        path_to_starfile: str | pathlib.Path,
+        path_to_relion_project: str | pathlib.Path,
+        *,
+        exist_ok: bool = False,
+        num_particles: int = 0,
+        updates_optics_group: bool = True,
+        mrcfile_options: dict[str, Any] = {},
+    ) -> Self:
+        """Convenience wrapper for intializing a new
+        [`cryospax.RelionParticleDataset`][] in `mode = 'w'`
+        and writing via `dataset[index] = particle_info`.
+
+        See [`cryospax.RelionParticleParameterFile.__init__`][]
+        and [`cryospax.RelionParticleDataset.__init__`][]
+        for more information.
+        """
+        parameter_file = RelionParticleParameterFile.empty(
+            path_to_starfile,
+            exist_ok=exist_ok,
+            num_particles=num_particles,
+            updates_optics_group=updates_optics_group,
+        )
+        return cls(
+            parameter_file,
+            path_to_relion_project,
+            mode="w",
+            mrcfile_options=mrcfile_options,
+        )
+
+    @classmethod
+    def load(
+        cls: type[Self],
+        path_to_starfile: str | pathlib.Path,
+        path_to_relion_project: str | pathlib.Path,
+        *,
+        selection_filter: dict[str, Callable] = {},
+        loads_metadata: bool = False,
+        loads_envelope: bool = False,
+        make_image_config: MakeImageConfig = default_make_image_config,
+        only_images: bool = False,
+    ) -> Self:
+        """Convenience wrapper for loading a
+        [`cryospax.RelionParticleDataset`][] in `mode = 'r'`
+        and reading via `particle_info = dataset[index]`.
+
+        See [`cryospax.RelionParticleParameterFile.__init__`][]
+        and [`cryospax.RelionParticleDataset.__init__`][]
+        for more information.
+        """
+        parameter_file = RelionParticleParameterFile.load(
+            path_to_starfile,
+            selection_filter=selection_filter,
+            loads_metadata=loads_metadata,
+            loads_envelope=loads_envelope,
+            make_image_config=make_image_config,
+        )
+        return cls(
+            parameter_file, path_to_relion_project, mode="r", only_images=only_images
+        )
 
     @override
     def __getitem__(
@@ -1012,15 +1144,16 @@ class RelionParticleDataset(
 
 def _load_starfile_data(
     path_to_starfile: pathlib.Path,
-    selection_filter: dict[str, Callable] | None,
     mode: Literal["r", "w"],
+    selection_filter: dict[str, Callable],
     exist_ok: bool,
+    num_particles: int,
 ) -> _StarfileData:
     if mode == "r":
         if path_to_starfile.exists():
             starfile_data = read_starfile(path_to_starfile)
             _validate_starfile_data(starfile_data)
-            if selection_filter is not None:
+            if len(selection_filter) > 0:
                 starfile_data = _select_particles(starfile_data, selection_filter)
         else:
             raise FileNotFoundError(
@@ -1036,7 +1169,7 @@ def _load_starfile_data(
                 "`exist_ok=True`."
             )
         else:
-            if selection_filter is None:
+            if len(selection_filter) == 0:
                 starfile_data = dict(
                     optics=pd.DataFrame(
                         data={
@@ -1046,7 +1179,7 @@ def _load_starfile_data(
                     ),
                     particles=pd.DataFrame(
                         data={
-                            column: pd.Series(dtype=dtype)
+                            column: pd.Series(dtype=dtype, index=range(num_particles))
                             for column, dtype in RELION_DEFAULT_PARTICLE_ENTRIES
                         }
                     ),
@@ -1786,7 +1919,7 @@ def _dict_to_options(d: dict[str, Any]) -> _Options:
     loads_metadata = d["loads_metadata"] if "loads_metadata" in d else False
     loads_envelope = d["loads_envelope"] if "loads_envelope" in d else False
     updates_optics_group = (
-        d["updates_optics_group"] if "updates_optics_group" in d else False
+        d["updates_optics_group"] if "updates_optics_group" in d else True
     )
     make_image_config = (
         d["make_image_config"] if "make_image_config" in d else _default_make_image_config
