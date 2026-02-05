@@ -5,21 +5,33 @@ import pytest
 
 @pytest.fixture
 def registered_datasets(sample_starfile_path, sample_relion_project_path):
+    parameter_file = spx.RelionParticleParameterFile(sample_starfile_path)
     return [
-        spx.RelionParticleParameterFile(sample_starfile_path),
+        parameter_file,
         spx.RelionParticleDataset(
-            spx.RelionParticleParameterFile(sample_starfile_path),
+            parameter_file.copy(),
             sample_relion_project_path,
+            only_images=False,
+        ),
+        spx.RelionParticleDataset(
+            parameter_file.copy(),
+            sample_relion_project_path,
+            only_images=True,
         ),
     ]
 
 
 @pytest.fixture
-def erroneous_datasets(sample_starfile_path):
+def erroneous_datasets(sample_starfile_path, sample_relion_project_path):
+    parameter_file = spx.RelionParticleParameterFile(
+        path_to_starfile=sample_starfile_path, options=dict(loads_metadata=True)
+    )
     return [
-        spx.RelionParticleParameterFile(
-            path_to_starfile=sample_starfile_path, options=dict(loads_metadata=True)
-        )
+        parameter_file,
+        spx.RelionParticleDataset(
+            parameter_file.copy(),
+            sample_relion_project_path,
+        ),
     ]
 
 
