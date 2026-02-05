@@ -322,18 +322,18 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
 
         - `options`:
             A dictionary of options for modifying the behavior of reading/writing.
-            - 'loads_metadata':
+            - `'loads_metadata'`:
                 If `True`, the resulting dict loads
                 the raw metadata from the STAR file that is not otherwise included
                 into a `pandas.DataFrame`.
                 If this is set to `True`, note that dictionaries cannot pass through
                 JIT boundaries without removing the metadata.
                 By default, `False`.
-            - 'loads_envelope':
+            - `'loads_envelope'`:
                 If `True`, read in the parameters of the CTF envelope function, i.e.
                 "rlnCtfScalefactor" and "rlnCtfBfactor".
                 By default, `False`.
-            - 'make_image_config':
+            - `'make_image_config'`:
                 A function with signature
                 `fn(shape, pixel_size, voltage_in_kilovolts)` that
                 returns a [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/)
@@ -359,8 +359,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     def empty(
         cls: type[Self],
         path_to_starfile: str | pathlib.Path,
+        max_optics_group: int,
         *,
-        max_optics_groups: int = 1,
         exist_ok: bool = False,
         num_particles: int = 0,
     ) -> Self:
@@ -375,7 +375,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             mode="w",
             exist_ok=exist_ok,
             num_particles=num_particles,
-            max_optics_group=max_optics_groups,
+            max_optics_group=max_optics_group,
         )
 
     @classmethod
@@ -384,12 +384,12 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         path_to_starfile: str | pathlib.Path,
         *,
         selection_filter: dict[str, Callable] = {},
+        # For writing via `dataset[index] = value`
+        max_optics_group: int | None = None,
         # For loading via `value = dataset[index]`
         loads_metadata: bool = False,
         loads_envelope: bool = False,
         make_image_config: MakeImageConfig = default_make_image_config,
-        # For writing via `dataset[index] = value`
-        max_optics_group: int | None = None,
     ) -> Self:
         """Convenience wrapper for
         [`cryospax.RelionParticleParameterFile.__init__`][] in
@@ -415,13 +415,13 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         """Load STAR file entries with `value = parameter_file[...]` syntax,
         where `value` is a dictionary with keys:
 
-        - 'pose':
+        - `'pose'`:
             The [`cryojax.simulator.EulerAnglePose`](https://michael-0brien.github.io/cryojax/api/simulator/pose/#cryojax.simulator.EulerAnglePose)
-        - 'image_config':
+        - `'image_config'`:
             The [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/#cryojax.simulator.BasicImageConfig)
-        - 'transfer_theory':
+        - `'transfer_theory'`:
             The [`cryojax.simulator.ContrastTransferTheory`](https://michael-0brien.github.io/cryojax/api/simulator/transfer_theory/#cryojax.simulator.ContrastTransferTheory)
-        - 'metadata':
+        - `'metadata'`:
             If `loads_metadata = True`, a `pandas.DataFrame` of entries
             *not* used when loading the `pose`, `image_config`, and
             `transfer_theory` (e.g. the 'rlnClassNumber'). Otherwise, this
@@ -468,13 +468,13 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         """Set STAR file entries with `parameter_file[...] = value` syntax,
         where `value` is a dictionary with keys:
 
-        - 'pose':
+        - `'pose'`:
             The [`cryojax.simulator.EulerAnglePose`](https://michael-0brien.github.io/cryojax/api/simulator/pose/#cryojax.simulator.EulerAnglePose)
-        - 'image_config':
+        - `'image_config'`:
             The [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/#cryojax.simulator.BasicImageConfig)
-        - 'transfer_theory':
+        - `'transfer_theory'`:
             The [`cryojax.simulator.ContrastTransferTheory`](https://michael-0brien.github.io/cryojax/api/simulator/transfer_theory/#cryojax.simulator.ContrastTransferTheory)
-        - 'metadata':
+        - `'metadata'`:
             A `pandas.DataFrame` used to write custom entries to the STAR
             file. `len(metadata)` should be equal to the number of particles.
 
@@ -528,16 +528,16 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         `parameter_file.append(value)` syntax, where `value` is
         a dictionary with keys:
 
-        - 'pose':
+        - `'pose'`:
             The [`cryojax.simulator.EulerAnglePose`](https://michael-0brien.github.io/cryojax/api/simulator/pose/#cryojax.simulator.EulerAnglePose)
             This key is required.
-        - 'image_config':
+        - `'image_config'`:
             The [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/#cryojax.simulator.BasicImageConfig)
             This key is required.
-        - 'transfer_theory':
+        - `'transfer_theory'`:
             The [`cryojax.simulator.ContrastTransferTheory`](https://michael-0brien.github.io/cryojax/api/simulator/transfer_theory/#cryojax.simulator.ContrastTransferTheory)
             This key is required.
-        - 'metadata':
+        - `'metadata'`:
             A `pandas.DataFrame` used to write custom entries to the STAR
             file. `len(metadata)` should be equal to the number of particles.
             This key is optional.
@@ -799,25 +799,25 @@ class RelionParticleDataset(
         - `mrcfile_options`:
             A dictionary with options for MRC file writing. This accepts
             the following keys:
-            - 'prefix':
+            - `'prefix'`:
                 A `str` which acts as the prefix to the filenames. If this
                 is equal to `'img'`, then the filename for image stack 0 will
                 be called "img_00000.mrcs", for `delimiter = '_'` and
                 `n_characters = 5`. By default, `'img'`.
-            - 'output_folder':
+            - `'output_folder'`:
                 A `str` or `pathlib.Path` type where to write MRC files,
                 relative to the `path_to_relion_project`.
-            - 'n_characters':
+            - `'n_characters'`:
                 An `int` for the number of characters to write the filename
                 number string. If this is equal to `5`, then the filename
                 for image stack 0 will be called "img_00000.mrcs", for
                 `delimiter = '_'` and `prefix = 'img'`. By default, `5`.
-             - 'delimiter':
+             - `'delimiter'`:
                 A `str` for the delimiter between the filename prefix
                 and number string. If this is equal to `'_'`, then the
                 filename for image stack 0 will be called "img_00000.mrcs",
                 for `n_characters = 5` and `prefix = 'img'`. By default, `'img'`.
-            - 'overwrite':
+            - `'overwrite'`:
                 If `True`, overwrite existing MRC file path if it exists. By
         - `only_images`:
             If `False`, load parameters and images. Otherwise, load only images.
@@ -873,6 +873,7 @@ class RelionParticleDataset(
         cls: type[Self],
         path_to_starfile: str | pathlib.Path,
         path_to_relion_project: str | pathlib.Path,
+        max_optics_group: int,
         *,
         exist_ok: bool = False,
         num_particles: int = 0,
@@ -891,6 +892,7 @@ class RelionParticleDataset(
             path_to_starfile,
             exist_ok=exist_ok,
             num_particles=num_particles,
+            max_optics_groups=max_optics_group,
         )
         return cls(
             parameter_file,
@@ -906,13 +908,14 @@ class RelionParticleDataset(
         path_to_relion_project: str | pathlib.Path,
         *,
         selection_filter: dict[str, Callable] = {},
+        # For writing via `dataset[index] = value`
+        max_optics_group: int | None = None,
+        mrcfile_options: dict[str, Any] = {},
         # For loading via `value = dataset[index]`
         loads_metadata: bool = False,
         loads_envelope: bool = False,
         make_image_config: MakeImageConfig = default_make_image_config,
         only_images: bool = False,
-        # For writing via `dataset[index] = value`
-        mrcfile_options: dict[str, Any] = {},
     ) -> Self:
         """Convenience wrapper for loading a
         [`cryospax.RelionParticleDataset`][] in `mode = 'r'`
@@ -929,6 +932,7 @@ class RelionParticleDataset(
             loads_metadata=loads_metadata,
             loads_envelope=loads_envelope,
             make_image_config=make_image_config,
+            max_optics_group=max_optics_group,
         )
         return cls(
             parameter_file,
