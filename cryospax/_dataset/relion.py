@@ -276,7 +276,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         exist_ok: bool = False,
         num_particles: int = 0,
         # For either 'r' or 'w'
-        max_optics_group: int | None = None,
+        max_optics_groups: int | None = None,
         options: dict[str, Any] = {},
     ):
         """**Arguments:**
@@ -305,15 +305,15 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             If in `mode = 'w'`, initialize STAR file data to be `num_particles`
             entries. These entries are filled with NaN values and must be set
             via `parameter_file[index] = parameter_info` syntax.
-        - `max_optics_group`:
+        - `max_optics_groups`:
             The maximum allowed optics group entries in the STAR file. The default
             value of this depends on if `mode = 'r'` or `mode = 'w'`:
 
             - If `mode = 'r'`:
-                By default, `max_optics_group` is twice the number of optics entries
+                By default, `max_optics_groups` is twice the number of optics entries
                 in the STAR file.
             - If `mode = 'w'`:
-                By default, `max_optics_group` is equal to `1`.
+                By default, `max_optics_groups` is equal to `1`.
 
             !!! info
                 This argument can be thought of as the number of allowed calls to
@@ -352,14 +352,14 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             selection_filter,
             exist_ok,
             num_particles,
-            max_optics_group,
+            max_optics_groups,
         )
 
     @classmethod
     def empty(
         cls: type[Self],
         path_to_starfile: str | pathlib.Path,
-        max_optics_group: int,
+        max_optics_groups: int,
         *,
         exist_ok: bool = False,
         num_particles: int = 0,
@@ -375,7 +375,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             mode="w",
             exist_ok=exist_ok,
             num_particles=num_particles,
-            max_optics_group=max_optics_group,
+            max_optics_groups=max_optics_groups,
         )
 
     @classmethod
@@ -385,7 +385,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         *,
         selection_filter: dict[str, Callable] = {},
         # For writing via `dataset[index] = value`
-        max_optics_group: int | None = None,
+        max_optics_groups: int | None = None,
         # For loading via `value = dataset[index]`
         loads_metadata: bool = False,
         loads_envelope: bool = False,
@@ -400,7 +400,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             path_to_starfile,
             mode="r",
             selection_filter=selection_filter,
-            max_optics_group=max_optics_group,
+            max_optics_groups=max_optics_groups,
             options={
                 "loads_metadata": loads_metadata,
                 "loads_envelope": loads_envelope,
@@ -498,12 +498,16 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             self.starfile_data["particles"],
             self.starfile_data["optics"],
         )
-        # Make and set the new optics data
-        optics_group_index, optics_array_index = self._increment_optics_group()
-        optics_data_for_update = _parameters_to_optics_data(value, optics_group_index)
-        optics_data.loc[
-            optics_data.index[optics_array_index], optics_data_for_update.columns
-        ] = optics_data_for_update.values
+        if {"image_config", "transfer_theory"}.issubset(value):
+            # Make and set the new optics data
+            optics_group_index, optics_array_index = self._increment_optics_group()
+            optics_data_for_update = _parameters_to_optics_data(value, optics_group_index)
+            optics_data.loc[
+                optics_data.index[np.atleast_1d(optics_array_index)],
+                optics_data_for_update.columns,
+            ] = optics_data_for_update.values
+        else:
+            optics_group_index = None
         # Make and set the new particle data
         # ... make
         particle_data_for_update = _parameters_to_particle_data(value, optics_group_index)
@@ -551,7 +555,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             _parameters_to_optics_data(value, optics_group_index),
         )
         optics_data.loc[
-            optics_data.index[optics_array_index], optics_data_for_update.columns
+            optics_data.index[np.atleast_1d(optics_array_index)],
+            optics_data_for_update.columns,
         ] = optics_data_for_update.values
         # Make new particle entries
         particle_data, particle_data_to_append = (
@@ -586,7 +591,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             if not path_to_starfile.parent.exists():
                 path_to_starfile.parent.mkdir(parents=True)
             # Crop to the true number of optics entries, rather than
-            # the overallocated value `max_optics_group`
+            # the overallocated value `max_optics_groups`
             starfile_data = _StarfileData(
                 particles=self.starfile_data["particles"],
                 optics=self.starfile_data["optics"].iloc[: self.num_optics_groups],
@@ -675,7 +680,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             the number of entries in the optics dataframe at
             `optics_data = parameter_file.starfile_data["optics"]`.
             Rather, we preallocate entries in the optics group using
-            `parameter_file = RelionParticleParameterFile(..., max_optics_group=...)`
+            `parameter_file = RelionParticleParameterFile(..., max_optics_groups=...)`
             to allow for thread-safe writing. Consequently, `optics_data`
             can have NaN entries.
 
@@ -686,7 +691,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         return self._num_optics_groups
 
     @property
-    def max_optics_group(self) -> int:
+    def max_optics_groups(self) -> int:
         """The maximum number of optics groups allowed in
         the STAR file.
         """
@@ -745,23 +750,26 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     def _increment_optics_group(self):
         lock = threading.Lock()
         with lock:
-            if self.num_optics_groups == self.max_optics_group:
+            if self.num_optics_groups == self.max_optics_groups:
                 raise IndexError(
                     "The number of optics groups in the STAR file exceeded "
                     "the number allocated in the "
                     "`parameter_file.starfile_data['optics']` dataframe. Try "
-                    "increasing the value of `max_optics_group`, e.g."
-                    "`RelionParticleParameterFile.empty(..., max_optics_group=...)` "
-                    "or `RelionParticleParameterFile.load(..., max_optics_group=...)`."
+                    "increasing the value of `max_optics_groups`, e.g."
+                    "`RelionParticleParameterFile.empty(..., max_optics_groups=...)` "
+                    "or `RelionParticleParameterFile.load(..., max_optics_groups=...)`."
                 )
             optics_data = self.starfile_data["optics"]
-            previous_num_optics_groups = self._num_optics_groups
-            optics_group_index = optics_data["rlnOpticsGroup"].iloc[
-                previous_num_optics_groups
-            ]
-            optics_group_index += 1
+            next_optics_array_index = self._num_optics_groups
+            if next_optics_array_index == 0:
+                next_optics_group_index = 1
+            else:
+                last_optics_group_index = optics_data["rlnOpticsGroup"].iloc[
+                    next_optics_array_index - 1
+                ]
+                next_optics_group_index = last_optics_group_index + 1
             self._num_optics_groups += 1
-        return optics_group_index, previous_num_optics_groups
+        return next_optics_group_index, next_optics_array_index
 
 
 class RelionParticleDataset(
@@ -873,7 +881,7 @@ class RelionParticleDataset(
         cls: type[Self],
         path_to_starfile: str | pathlib.Path,
         path_to_relion_project: str | pathlib.Path,
-        max_optics_group: int,
+        max_optics_groups: int,
         *,
         exist_ok: bool = False,
         num_particles: int = 0,
@@ -892,7 +900,7 @@ class RelionParticleDataset(
             path_to_starfile,
             exist_ok=exist_ok,
             num_particles=num_particles,
-            max_optics_groups=max_optics_group,
+            max_optics_groups=max_optics_groups,
         )
         return cls(
             parameter_file,
@@ -909,7 +917,7 @@ class RelionParticleDataset(
         *,
         selection_filter: dict[str, Callable] = {},
         # For writing via `dataset[index] = value`
-        max_optics_group: int | None = None,
+        max_optics_groups: int | None = None,
         mrcfile_options: dict[str, Any] = {},
         # For loading via `value = dataset[index]`
         loads_metadata: bool = False,
@@ -932,7 +940,7 @@ class RelionParticleDataset(
             loads_metadata=loads_metadata,
             loads_envelope=loads_envelope,
             make_image_config=make_image_config,
-            max_optics_group=max_optics_group,
+            max_optics_groups=max_optics_groups,
         )
         return cls(
             parameter_file,
@@ -1230,7 +1238,7 @@ def _load_starfile_data(
     selection_filter: dict[str, Callable],
     exist_ok: bool,
     num_particles: int,
-    max_optics_group: int | None,
+    max_optics_groups: int | None,
 ) -> tuple[_StarfileData, int]:
     if mode == "r":
         if path_to_starfile.exists():
@@ -1241,9 +1249,9 @@ def _load_starfile_data(
                 starfile_data = _select_particles(starfile_data, selection_filter)
             # Handle optics group entries
             num_optics_groups = len(starfile_data["optics"])
-            if max_optics_group is None:
-                max_optics_group = 2 * num_optics_groups
-            starfile_data["optics"].reindex(range(max_optics_group))
+            if max_optics_groups is None:
+                max_optics_groups = 2 * num_optics_groups
+            starfile_data["optics"].reindex(range(max_optics_groups))
         else:
             raise FileNotFoundError(
                 f"Set `mode = '{mode}'`, but STAR file {str(path_to_starfile)} does not "
@@ -1260,12 +1268,12 @@ def _load_starfile_data(
         else:
             if len(selection_filter) == 0:
                 num_optics_groups = 0
-                if max_optics_group is None:
-                    max_optics_group = 1
+                if max_optics_groups is None:
+                    max_optics_groups = 1
                 starfile_data = dict(
                     optics=pd.DataFrame(
                         data={
-                            column: pd.Series(dtype=dtype, index=range(max_optics_group))
+                            column: pd.Series(dtype=dtype, index=range(max_optics_groups))
                             for column, dtype in RELION_DEFAULT_OPTICS_ENTRIES
                         }
                     ),
@@ -1781,7 +1789,7 @@ def _parameters_to_optics_data(
 
 
 def _parameters_to_particle_data(
-    parameters: _ParticleParameterLike, optics_group_index: int
+    parameters: _ParticleParameterLike, optics_group_index: int | None
 ) -> pd.DataFrame:
     particles_dict = {}
     if "pose" in parameters:
@@ -1832,7 +1840,8 @@ def _parameters_to_particle_data(
             "`foo` is, for example, `foo = dict(pose=EulerAnglePose(...))`."
         )
     # Fill CTF parameters
-    if "transfer_theory" in parameters:
+    if optics_group_index is not None:
+        assert "transfer_theory" in parameters
         transfer_theory = parameters["transfer_theory"]
         if isinstance(transfer_theory.ctf, AstigmaticCTF):
             if pose.offset_z_in_angstroms is None:
@@ -1874,10 +1883,10 @@ def _parameters_to_particle_data(
                 f"{type(transfer_theory.envelope).__name__}."
             )
         particles_dict["rlnPhaseShift"] = transfer_theory.phase_shift
-    # Now, miscellaneous parameters
-    particles_dict["rlnOpticsGroup"] = np.full(
-        (n_particles,), optics_group_index, dtype=int
-    )
+        # Now, miscellaneous parameters
+        particles_dict["rlnOpticsGroup"] = np.full(
+            (n_particles,), optics_group_index, dtype=int
+        )
     # Make sure parameters are numpy arrays
     particles_dict = jax.tree.map(
         lambda x: np.asarray(x) if isinstance(x, Array) else x, particles_dict

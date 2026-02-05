@@ -514,18 +514,17 @@ def test_append_particle_parameters(index, loads_envelope):
 
 
 @pytest.mark.parametrize(
-    "index, updates_optics_group, sets_envelope",
+    "index, sets_envelope",
     [
-        (0, False, False),
-        ([0, 1], False, False),
-        (0, True, False),
-        (0, False, True),
+        (0, False),
+        ([0, 1], False),
+        (0, False),
+        (0, True),
     ],
 )
 def test_set_particle_parameters(
     sample_starfile_path,
     index,
-    updates_optics_group,
     sets_envelope,
 ):
     index = np.asarray(index)
@@ -570,7 +569,6 @@ def test_set_particle_parameters(
         options=dict(
             loads_envelope=sets_envelope,
             loads_metadata=False,
-            updates_optics_group=updates_optics_group,
         ),
     )
     # Set params
@@ -587,21 +585,7 @@ def test_set_particle_parameters(
     # Load params that were just set
     loaded_parameters = parameter_file[index]
     del new_parameters["metadata"]
-    if updates_optics_group:
-        assert compare_dicts(new_parameters, loaded_parameters)
-    else:
-        assert compare_dicts(
-            dict(pose=new_parameters["pose"]), dict(pose=loaded_parameters["pose"])
-        )
-        np.testing.assert_allclose(
-            new_parameters["transfer_theory"].ctf.defocus_in_angstroms,  # type: ignore
-            loaded_parameters["transfer_theory"].ctf.defocus_in_angstroms,  # type: ignore
-        )
-        if sets_envelope:
-            np.testing.assert_allclose(
-                new_parameters["transfer_theory"].envelope.b_factor,  # type: ignore
-                loaded_parameters["transfer_theory"].envelope.b_factor,  # type: ignore
-            )
+    assert compare_dicts(new_parameters, loaded_parameters)
 
 
 def test_file_exists_error():
@@ -808,8 +792,7 @@ def test_write_particle_batched_particle_parameters():
 
     particle_params = _make_particle_params(jnp.array([0, 0, 0, 0, 0]))
     new_parameters_file = RelionParticleParameterFile.empty(
-        path_to_starfile="dummy.star",
-        exist_ok=True,
+        path_to_starfile="dummy.star", exist_ok=True, max_optics_groups=1
     )
 
     new_parameters_file.path_to_starfile = (
@@ -859,12 +842,16 @@ def test_write_starfile_different_envs():
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         exist_ok=True,
+        max_optics_groups=1,
     )
+    new_parameters_file.append(particle_params)
+    new_parameters_file.save(overwrite=True)
 
     particle_params = _make_particle_params(im.FourierConstant(1.0))
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         exist_ok=True,
+        max_optics_groups=1,
     )
     new_parameters_file.append(particle_params)
     new_parameters_file.save(overwrite=True)
@@ -873,6 +860,7 @@ def test_write_starfile_different_envs():
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         exist_ok=True,
+        max_optics_groups=1,
     )
     new_parameters_file.append(particle_params)
     new_parameters_file.save(overwrite=True)
@@ -882,6 +870,7 @@ def test_write_starfile_different_envs():
         new_parameters_file = RelionParticleParameterFile.empty(
             path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
             exist_ok=True,
+            max_optics_groups=1,
         )
         new_parameters_file.append(particle_params)
         new_parameters_file.save(overwrite=True)
@@ -1026,6 +1015,7 @@ def test_append_relion_stack_dataset():
     new_stack = RelionParticleDataset.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         path_to_relion_project="tests/outputs/starfile_writing/",
+        max_optics_groups=1,
         exist_ok=True,
         mrcfile_options={"overwrite": False},
     )
