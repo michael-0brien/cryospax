@@ -234,7 +234,7 @@ def test_load_multiple_mrcs():
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         mode="w",
         exist_ok=True,
-        options=dict(updates_optics_group=True, loads_envelope=True),
+        options=dict(loads_envelope=True),
     )
     parameters_file.append(particle_params)
 

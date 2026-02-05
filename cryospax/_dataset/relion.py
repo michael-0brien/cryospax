@@ -525,6 +525,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         particle_data.loc[
             particle_data.index[index], particle_data_for_update.columns
         ] = particle_data_for_update.values
+        self._starfile_data["optics"] = optics_data
+        self._starfile_data["particles"] = particle_data
 
     @override
     def append(self, value: _ParticleParameterLike):
@@ -569,6 +571,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             if len(particle_data) > 0
             else particle_data_to_append
         )
+        self._starfile_data["optics"] = optics_data
+        self._starfile_data["particles"] = particle_data
 
     @override
     def save(
@@ -1251,7 +1255,9 @@ def _load_starfile_data(
             num_optics_groups = len(starfile_data["optics"])
             if max_optics_groups is None:
                 max_optics_groups = 2 * num_optics_groups
-            starfile_data["optics"].reindex(range(max_optics_groups))
+            starfile_data["optics"] = starfile_data["optics"].reindex(
+                index=range(max_optics_groups)
+            )
         else:
             raise FileNotFoundError(
                 f"Set `mode = '{mode}'`, but STAR file {str(path_to_starfile)} does not "
@@ -1625,6 +1631,13 @@ def _validate_dataset_index(cls, index, n_rows):
     elif isinstance(index, slice):
         if index.start is not None and index.start > n_rows - 1:
             raise IndexError(index_error_msg(index.start))
+    elif isinstance(index, np.ndarray):
+        if index.ndim > 1:
+            raise IndexError(
+                f"Tried to index {cls.__name__} by a numpy "
+                f"array, but found that the array had `ndim = {index.ndim}`. "
+                "Only 0-d and 1-d numpy arrays are supported."
+            )
     else:
         raise IndexError(
             f"Indexing with the type {type(index)} is not supported by "
@@ -1840,8 +1853,7 @@ def _parameters_to_particle_data(
             "`foo` is, for example, `foo = dict(pose=EulerAnglePose(...))`."
         )
     # Fill CTF parameters
-    if optics_group_index is not None:
-        assert "transfer_theory" in parameters
+    if "transfer_theory" in parameters:
         transfer_theory = parameters["transfer_theory"]
         if isinstance(transfer_theory.ctf, AstigmaticCTF):
             if pose.offset_z_in_angstroms is None:
@@ -1883,6 +1895,7 @@ def _parameters_to_particle_data(
                 f"{type(transfer_theory.envelope).__name__}."
             )
         particles_dict["rlnPhaseShift"] = transfer_theory.phase_shift
+    if optics_group_index is not None:
         # Now, miscellaneous parameters
         particles_dict["rlnOpticsGroup"] = np.full(
             (n_particles,), optics_group_index, dtype=int

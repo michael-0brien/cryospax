@@ -566,10 +566,7 @@ def test_set_particle_parameters(
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
         mode="r",
-        options=dict(
-            loads_envelope=sets_envelope,
-            loads_metadata=False,
-        ),
+        options=dict(loads_envelope=sets_envelope, loads_metadata=False),
     )
     # Set params
     parameter_file[index] = new_parameters
@@ -720,6 +717,7 @@ def test_write_image(
         path_to_starfile=sample_starfile_path,
         mode="r",
         exist_ok=True,
+        max_optics_groups=10,
     )
     parameter_file.path_to_starfile = (
         "tests/outputs/starfile_writing/test_particle_parameters.star"
