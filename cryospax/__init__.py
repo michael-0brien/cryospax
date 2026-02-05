@@ -8,7 +8,7 @@ from ._dataset import (
     CryoSparcParticleParameterFile as CryoSparcParticleParameterFile,
     RelionParticleDataset as RelionParticleDataset,
     RelionParticleParameterFile as RelionParticleParameterFile,
-    convert_csparc_to_relion as convert_csparc_to_relion
+    convert_csparc_to_relion as convert_csparc_to_relion,
 )
 from ._io import (
     read_csparc_data as read_csparc_data,

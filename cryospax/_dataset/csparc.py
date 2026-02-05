@@ -31,9 +31,9 @@ from .common import (
     _dict_to_options,
     _make_envelope_function,
     _make_transfer_theory,
+    _select_particles,
     _validate_dataset_index,
     _validate_mode,
-    _select_particles
 )
 
 
@@ -347,7 +347,6 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
     def mode(self) -> Literal["r", "w"]:
         return self._mode  # type: ignore
 
-
     @property
     @override
     def loads_metadata(self) -> bool:
@@ -430,6 +429,7 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
         raise NotImplementedError(
             "saving is not supported for CryoSparcParticleParameterFile"
         )
+
     @property
     def make_image_config(self) -> MakeImageConfig:
         """A function that returns a
@@ -583,9 +583,7 @@ class CryoSparcParticleDataset(
 
     @override
     def append(self, value: _ParticleStackLike):
-        raise NotImplementedError(
-            "append is not supported for CryoSparcParticleDataset"
-        )
+        raise NotImplementedError("append is not supported for CryoSparcParticleDataset")
 
     @override
     def write_images(
@@ -657,8 +655,6 @@ class CryoSparcParticleDataset(
     @just_images.setter
     def just_images(self, value: bool):
         self._just_images = value
-
-
 
 
 def _load_csfile_data(
@@ -765,7 +761,7 @@ def _make_pytrees_from_csfile(
         csparc_pose_angles = np.array([0.0, 0.0, 0.0])
 
     csparc_pose_angles = np.rad2deg(csparc_pose_angles)
-    # Now transform the angles and shift to the AxisAnglePose convention 
+    # Now transform the angles and shift to the AxisAnglePose convention
     pose_shift = csparc_pose_shift * pixel_size
 
     # Now, flip the sign of the translations and transpose rotations.

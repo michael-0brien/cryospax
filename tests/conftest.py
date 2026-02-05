@@ -12,6 +12,7 @@ jax.config.update("jax_enable_x64", True)
 def sample_starfile_path():
     return os.path.join(os.path.dirname(__file__), "data", "test_starfile.star")
 
+
 @pytest.fixture
 def sample_csfile_path():
     return os.path.join(os.path.dirname(__file__), "data", "test_csfile.cs")

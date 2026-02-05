@@ -43,7 +43,7 @@ def convert_csparc_to_relion(
         exist_ok=exists_ok,
         options={
             "loads_envelope": cs_parameter_file.loads_envelope,
-        }
+        },
     )
 
     # set particle parameters

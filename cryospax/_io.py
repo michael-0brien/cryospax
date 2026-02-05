@@ -68,7 +68,9 @@ def read_csparc_data(
     _validate_filename(filename, mode="r", suffix="cs")
 
     csfile_data = np.load(filename, allow_pickle=True)
-    data_entries = [csfile_data.dtype.names[i] for i in range(len(csfile_data.dtype.names))]
+    data_entries = [
+        csfile_data.dtype.names[i] for i in range(len(csfile_data.dtype.names))
+    ]
     csparc_data = pd.DataFrame(
         {
             entry: [csfile_data[j][entry] for j in range(len(csfile_data))]

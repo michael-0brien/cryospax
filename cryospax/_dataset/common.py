@@ -5,9 +5,9 @@ from typing import Any, Literal, TypedDict
 
 import equinox as eqx
 import numpy as np
+import pandas as pd
 from cryojax.ndimage import FourierConstant, FourierGaussian
 from cryojax.simulator import AstigmaticCTF, BasicImageConfig, ContrastTransferTheory
-import pandas as pd
 
 
 MakeImageConfig = Callable[
@@ -29,6 +29,7 @@ class _MrcfileSettings(TypedDict):
     delimiter: str
     overwrite: bool
     compression: str | None
+
 
 #
 # Functions for validating and definition of class attributes
@@ -81,7 +82,9 @@ def _dict_to_options(d: dict[str, Any]) -> _Options:
         make_image_config=make_image_config,
     )
 
+
 # Functions for particle reading
+
 
 def _validate_dataset_index(cls, index, n_rows):
     index_error_msg = lambda idx: (
@@ -155,10 +158,10 @@ def _make_transfer_theory(defocus, astig, angle, sph, ac, ps, env=None):
         lambda x: (x.amplitude_contrast_ratio, x.phase_shift), transfer_theory, (ac, ps)
     )
 
+
 def _select_particles(
     particle_data: pd.DataFrame, selection_filter: dict[str, Callable]
 ) -> pd.DataFrame:
-
     boolean_mask = pd.Series(True, index=particle_data.index)
     for key in selection_filter:
         if key in particle_data.columns:

@@ -11,14 +11,19 @@ repos:
     rev: "v6.0.0"
     hooks:
     -   id: trailing-whitespace
+        exclude: \.cs$
     -   id: end-of-file-fixer
+        exclude: \.cs$
     -   id: check-yaml
+        exclude: \.cs$
     -   id: check-added-large-files
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: "v0.14.14"
   hooks:
     - id: ruff-format # formatter
       types_or: [python, pyi, jupyter, toml]
+      exclude: \.cs$
     - id: ruff # linter
       types_or: [python, pyi, jupyter, toml]
       args: [--fix]
+      exclude: \.cs$

@@ -33,9 +33,9 @@ from .common import (
     _dict_to_options,
     _make_envelope_function,
     _make_transfer_theory,
+    _select_particles,
     _validate_dataset_index,
     _validate_mode,
-    _select_particles
 )
 
 
@@ -1053,6 +1053,7 @@ def _load_starfile_data(
     return _StarfileData(
         optics=starfile_data["optics"], particles=starfile_data["particles"]
     )
+
 
 #
 # STAR file reading

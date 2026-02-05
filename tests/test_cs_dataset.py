@@ -1,18 +1,11 @@
-import os
-import shutil
-from functools import partial
 from typing import cast
 
-import cryojax.ndimage as im
 import cryojax.simulator as cxs
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-import jax.random as jr
 import numpy as np
-import pandas as pd
 import pytest
-from cryojax.rotations import SO3
 from cryospax import (
     CryoSparcParticleDataset,
     CryoSparcParticleParameterFile,
@@ -20,8 +13,6 @@ from cryospax import (
     RelionParticleParameterFile,
     convert_csparc_to_relion,
 )
-from cryospax._dataset.csparc import _validate_csfile_data
-from jaxtyping import TypeCheckError
 
 
 def compare_dicts(dict1, dict2):
@@ -442,9 +433,9 @@ def test_matches_with_relion(
 
     assert jnp.allclose(images_cs, images_rl), "Particle images do not match"
 
+
 @pytest.mark.parametrize("loads_envelope", [True, False])
 def test_conversion(sample_csfile_path, loads_envelope):
-
     parameter_file_cs = CryoSparcParticleParameterFile(
         sample_csfile_path, options=dict(loads_envelope=loads_envelope)
     )
