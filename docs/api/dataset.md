@@ -48,7 +48,6 @@ Datasets output a pytree that can be passed the JAX transformations. A particula
                 - loads_envelope
                 - updates_optics_group
                 - make_image_config
-                - rotation_convention
 
 ::: cryospax.RelionParticleParameterFile
     options:
@@ -69,7 +68,6 @@ Datasets output a pytree that can be passed the JAX transformations. A particula
             - loads_envelope
             - updates_optics_group
             - make_image_config
-            - rotation_convention
 
 ## Datasets: parameter and image manipulation
 
@@ -85,6 +83,7 @@ Datasets output a pytree that can be passed the JAX transformations. A particula
                 - parameter_file
                 - write_images
                 - mode
+                - only_images
 
 ::: cryospax.RelionParticleDataset
     options:
@@ -99,7 +98,7 @@ Datasets output a pytree that can be passed the JAX transformations. A particula
             - parameter_file
             - path_to_relion_project
             - mrcfile_settings
-            - loads_parameters
+            - only_images
 
 ## Basic I/O
 

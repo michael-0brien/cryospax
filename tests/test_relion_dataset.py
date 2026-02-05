@@ -775,7 +775,7 @@ def test_write_image(
     with pytest.raises(IOError):
         dataset[0] = particle
 
-    dataset.mrcfile_settings = dict(prefix="f", overwrite=True)
+    dataset.mrcfile_options = dict(prefix="f", overwrite=True)
     dataset[0] = particle
 
     starfile_data = dataset.parameter_file.starfile_data
@@ -980,7 +980,7 @@ def test_raise_errors_stack_dataset(sample_starfile_path, sample_relion_project_
         parameter_file,
         path_to_relion_project="tests/outputs/starfile_writing/",
         mode="w",
-        mrcfile_settings={"overwrite": False},
+        mrcfile_options={"overwrite": False},
     )
 
     parameters = parameter_file[0]
@@ -1051,7 +1051,7 @@ def test_append_relion_stack_dataset():
         new_parameters_file,
         path_to_relion_project="tests/outputs/starfile_writing/",
         mode="w",
-        mrcfile_settings={"overwrite": False},
+        mrcfile_options={"overwrite": False},
     )
 
     n_images = 10
