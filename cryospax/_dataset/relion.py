@@ -94,10 +94,9 @@ if hasattr(typing, "GENERATING_DOCUMENTATION"):
     _ParticleStackLike = dict[str, Any]  # pyright: ignore[reportAssignmentType]
     _Options = dict[str, Any]  # pyright: ignore[reportAssignmentType]
     _StarfileData = dict[str, Any]  # pyright: ignore[reportAssignmentType]
-    _MrcfileSettings = dict[str, Any]  # pyright: ignore[reportAssignmentType]
+    _MrcfileOptions = dict[str, Any]  # pyright: ignore[reportAssignmentType]
 
 else:
-    from .common import _MrcfileSettings
 
     class _ParticleParameterInfo(TypedDict):
         """Parameters for a particle stack from RELION."""
@@ -621,8 +620,8 @@ class RelionParticleDataset(
         path_to_relion_project: str | pathlib.Path,
         mode: Literal["r", "w"] = "r",
         *,
-        mrcfile_settings: dict[str, Any] = {},
-        just_images: bool = False,
+        mrcfile_options: dict[str, Any] = {},
+        only_images: bool = False,
     ):
         """**Arguments:**
 
@@ -640,30 +639,29 @@ class RelionParticleDataset(
             are not yet written.
             - If `mode = 'r'`, images are read from the 'rlnImageName'
             stored in the `parameter_file.starfile_data`.
-        - `mrcfile_settings`:
+        - `mrcfile_options`:
             A dictionary with the following keys:
             - 'prefix':
                 A `str` which acts as the prefix to the filenames. If this
-                is equal to `"f"`, then the filename for image stack 0 will
-                be called "f-00000.mrcs", for `delimiter = '-'` and
-                `n_characters = 5`.
-                are of format "filenam"
+                is equal to `'img'`, then the filename for image stack 0 will
+                be called "img_00000.mrcs", for `delimiter = '_'` and
+                `n_characters = 5`. By default, `'img'`.
             - 'output_folder':
                 A `str` or `pathlib.Path` type where to write MRC files,
                 relative to the `path_to_relion_project`.
             - 'n_characters':
                 An `int` for the number of characters to write the filename
                 number string. If this is equal to `5`, then the filename
-                for image stack 0 will be called "f-00000.mrcs", for
-                `delimiter = '-'` and `prefix = 'f'`.
+                for image stack 0 will be called "img_00000.mrcs", for
+                `delimiter = '_'` and `prefix = 'img'`. By default, `5`.
              - 'delimiter':
                 A `str` for the delimiter between the filename prefix
-                and number string. If this is equal to `'-'`, then the
-                filename for image stack 0 will be called "f-00000.mrcs",
-                for `n_characters = 5` and `prefix = 'f'`.
+                and number string. If this is equal to `'_'`, then the
+                filename for image stack 0 will be called "img_00000.mrcs",
+                for `n_characters = 5` and `prefix = 'img'`. By default, `'img'`.
             - 'overwrite':
-                If `True`, overwrite existing MRC file path if it exists.
-        - `just_images`:
+                If `True`, overwrite existing MRC file path if it exists. By
+        - `only_images`:
             If `False`, load parameters and images. Otherwise, load only images.
         """
         # Set properties. First, core properties of the dataset, starting
@@ -680,9 +678,9 @@ class RelionParticleDataset(
         # ... properties common to reading and writing images
         self._path_to_relion_project = pathlib.Path(path_to_relion_project)
         # ... properties for reading images
-        self._just_images = just_images
+        self._only_images = only_images
         # ... properties for writing images
-        self._mrcfile_settings = _dict_to_mrcfile_settings(mrcfile_settings)
+        self._mrcfile_options = _dict_to_mrcfile_options(mrcfile_options)
         # Now, initialize for `mode = 'r'` vs `mode = 'w'`
         images_exist = "rlnImageName" in particle_data.columns
         project_exists = self.path_to_relion_project.exists()
@@ -725,9 +723,9 @@ class RelionParticleDataset(
         - 'parameters':
             See [`cryospax.RelionParticleParameterFile`][] for more
             information. This key is not included if
-            `just_images = True`.
+            `only_images = True`.
         """  # noqa: E501
-        if not self.just_images:
+        if not self.only_images:
             # Load images and parameters. First, read parameters
             # and metadata from the STAR file
             loads_metadata = self.parameter_file.loads_metadata
@@ -910,7 +908,7 @@ class RelionParticleDataset(
             index_array,
             particle_data,
             n_particles,
-            self.mrcfile_settings,
+            self.mrcfile_options,
             self.path_to_relion_project,
         )
         # Set the STAR file column
@@ -926,8 +924,8 @@ class RelionParticleDataset(
                 images.astype(jnp.float32),
                 pixel_size,
                 path_to_filename,
-                overwrite=self.mrcfile_settings["overwrite"],
-                compression=self.mrcfile_settings["compression"],
+                overwrite=self.mrcfile_options["overwrite"],
+                compression=self.mrcfile_options["compression"],
             )
         except Exception as err:
             raise OSError(
@@ -935,7 +933,7 @@ class RelionParticleDataset(
                 "file. Most likely, the filename the writer "
                 f"chose ({str(path_to_filename)}) already "
                 "exists. Try changing the "
-                "`RelionParticleDataset.mrcfile_settings`. "
+                "`RelionParticleDataset.mrcfile_options`. "
                 f"The error message was:\n{err}"
             )
 
@@ -970,34 +968,34 @@ class RelionParticleDataset(
         return self._path_to_relion_project
 
     @property
-    def mrcfile_settings(self) -> _MrcfileSettings:
+    def mrcfile_options(self) -> _MrcfileOptions:
         """Settings for writing MRC files with. See
         [`cryospax.RelionParticleDataset.__init__`][]
         for more information.
         """
-        return self._mrcfile_settings
+        return self._mrcfile_options
 
-    @mrcfile_settings.setter
-    def mrcfile_settings(self, value: dict[str, Any]):
-        self._mrcfile_settings = _dict_to_mrcfile_settings(value)
+    @mrcfile_options.setter
+    def mrcfile_options(self, value: dict[str, Any]):
+        self._mrcfile_options = _dict_to_mrcfile_options(value)
 
     @property
-    def just_images(self) -> bool:
+    def only_images(self) -> bool:
         """If `True`, load images and *not* parameters. This gives
         better performance when it is not necessary to load parameters.
 
         ```python
-        dataset.just_images = True
+        dataset.only_images = True
         particle_info = dataset[0]
         assert "images" in particle_info  # True
         assert "parameters" not in particle_info  # True
         ```
         """
-        return self._just_images
+        return self._only_images
 
-    @just_images.setter
-    def just_images(self, value: bool):
-        self._just_images = value
+    @only_images.setter
+    def only_images(self, value: bool):
+        self._only_images = value
 
 
 def _load_starfile_data(
@@ -1586,14 +1584,29 @@ def _get_optics_group_from_particle_data(
 #
 # Now, functions for writing image files
 #
-def _dict_to_mrcfile_settings(d: dict[str, Any]) -> _MrcfileSettings:
-    prefix = d["prefix"] if "prefix" in d else ""
+def _dict_to_mrcfile_options(d: dict[str, Any]) -> _MrcfileOptions:
+    _options_keys = {
+        "prefix",
+        "output_folder",
+        "delimiter",
+        "n_characters",
+        "overwrite",
+        "compression",
+    }
+    if not set(d.keys()).issubset(_options_keys):
+        raise ValueError(
+            "Expected that dictionary `mrcfile_options` passed to "
+            "`RelionParticleDataset(..., mrcfile_options=...)` "
+            f"had a subset of keys {_options_keys}, but found that it "
+            f"had keys {set(d.keys())}."
+        )
+    prefix = d["prefix"] if "prefix" in d else "img"
     output_folder = d["output_folder"] if "output_folder" in d else ""
     delimiter = d["delimiter"] if "delimiter" in d else "_"
-    n_characters = d["n_characters"] if "n_characters" in d else 6
+    n_characters = d["n_characters"] if "n_characters" in d else 5
     overwrite = d["overwrite"] if "overwrite" in d else False
     compression = d["compression"] if "compression" in d else None
-    return _MrcfileSettings(
+    return _MrcfileOptions(
         prefix=prefix,
         output_folder=output_folder,
         delimiter=delimiter,
@@ -1614,7 +1627,7 @@ def _make_image_filename(
     index: Int[np.ndarray, " _"],
     particle_data: pd.DataFrame,
     n_particles: int,
-    mrcfile_settings: _MrcfileSettings,
+    mrcfile_options: _MrcfileOptions,
     path_to_relion_project: pathlib.Path,
 ) -> tuple[pathlib.Path, list[str]]:
     # Get the file number for this MRC file
@@ -1636,20 +1649,15 @@ def _make_image_filename(
             else:
                 file_number = _parse_filename_for_number(last_filename) + 1
     # Unpack settings
-    prefix = mrcfile_settings["prefix"]
-    output_folder = mrcfile_settings["output_folder"]
-    delimiter = mrcfile_settings["delimiter"]
-    n_characters = mrcfile_settings["n_characters"]
+    prefix = mrcfile_options["prefix"]
+    output_folder = mrcfile_options["output_folder"]
+    delimiter = mrcfile_options["delimiter"]
+    n_characters = mrcfile_options["n_characters"]
     # Generate filename
     file_number_fmt = _format_number_for_filename(file_number, n_characters=n_characters)
-    if prefix == "":
-        relative_path_to_filename = str(
-            pathlib.Path(output_folder, file_number_fmt + ".mrcs")
-        )
-    else:
-        relative_path_to_filename = str(
-            pathlib.Path(output_folder, prefix + delimiter + file_number_fmt + ".mrcs")
-        )
+    relative_path_to_filename = str(
+        pathlib.Path(output_folder, prefix + delimiter + file_number_fmt + ".mrcs")
+    )
     # Finally, generate the 'rln_image_name' column, which includes the particle index
     rln_image_names = [
         _format_number_for_filename(int(i + 1), n_characters)

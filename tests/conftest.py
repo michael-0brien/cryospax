@@ -25,7 +25,7 @@ def sample_relion_project_path():
 
 @pytest.fixture
 def sample_image_stack_path(sample_relion_project_path):
-    return os.path.join(sample_relion_project_path, "000000.mrcs")
+    return os.path.join(sample_relion_project_path, "img_00000.mrcs")
 
 
 @pytest.fixture

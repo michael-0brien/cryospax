@@ -132,3 +132,13 @@ class AbstractParticleDataset(AbstractDataset[T1], Generic[T1, T2]):
     @property
     def mode(self) -> Literal["r", "w"]:
         raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def only_images(self) -> bool:
+        raise NotImplementedError
+
+    @only_images.setter
+    @abc.abstractmethod
+    def only_images(self, value: bool):
+        raise NotImplementedError
