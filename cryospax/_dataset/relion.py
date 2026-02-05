@@ -311,7 +311,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                 returns a [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/)
                 class. Use this argument when it is desired to customize the `image_config`
                 returned from this class, i.e.
-                `value = parameter_file[0:7]; print(value["image_config])`.
+                `value = parameter_file[0:7]; print(value["image_config"])`.
             - 'updates_optics_group':
                 If `True`, when re-writing STAR file entries via
                 `parameter_file[index] = parameter_info` syntax, creates a
