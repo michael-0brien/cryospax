@@ -4,7 +4,6 @@ import abc
 import pathlib
 import re
 import typing
-import warnings
 from collections.abc import Callable
 from typing import Any, Literal, TypedDict
 from typing_extensions import NotRequired, override
@@ -29,6 +28,15 @@ from jaxtyping import Array, Float, Int
 from .._io import read_starfile, write_starfile
 from .._misc import filter_device_get
 from .base_dataset import AbstractParticleDataset, AbstractParticleParameterFile
+from .common import (
+    MakeImageConfig,
+    _dict_to_options,
+    _make_envelope_function,
+    _make_transfer_theory,
+    _select_particles,
+    _validate_dataset_index,
+    _validate_mode,
+)
 
 
 # RELION column entries
@@ -79,11 +87,6 @@ RELION_SUPPORTED_PARTICLE_ENTRIES = [
 ]
 
 
-MakeImageConfig = Callable[
-    [tuple[int, int], np.ndarray | float, np.ndarray | float], BasicImageConfig
-]
-
-
 if hasattr(typing, "GENERATING_DOCUMENTATION"):
     _ParticleParameterInfo = dict[str, Any]  # pyright: ignore[reportAssignmentType]
     _ParticleStackInfo = dict[str, Any]  # pyright: ignore[reportAssignmentType]
@@ -94,6 +97,7 @@ if hasattr(typing, "GENERATING_DOCUMENTATION"):
     _MrcfileOptions = dict[str, Any]  # pyright: ignore[reportAssignmentType]
 
 else:
+    from .common import _MrcfileOptions
 
     class _ParticleParameterInfo(TypedDict):
         """Parameters for a particle stack from RELION."""
@@ -110,26 +114,12 @@ else:
         images: Float[np.ndarray, "... y_dim x_dim"]
         parameters: NotRequired[_ParticleParameterInfo]
 
-    _ParticleParameterLike = dict[str, Any] | _ParticleParameterInfo
-    _ParticleStackLike = dict[str, Any] | _ParticleStackInfo
-
-    class _Options(TypedDict):
-        loads_metadata: bool
-        loads_envelope: bool
-        updates_optics_group: bool
-        make_image_config: MakeImageConfig
-
     class _StarfileData(TypedDict):
         optics: pd.DataFrame
         particles: pd.DataFrame
 
-    class _MrcfileOptions(TypedDict):
-        prefix: str
-        output_folder: str | pathlib.Path
-        n_characters: int
-        delimiter: str
-        overwrite: bool
-        compression: str | None
+    _ParticleParameterLike = dict[str, Any] | _ParticleParameterInfo
+    _ParticleStackLike = dict[str, Any] | _ParticleStackInfo
 
 
 def _default_make_image_config(shape, pixel_size, voltage_in_kilovolts):
@@ -260,7 +250,6 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         - `path_to_starfile`:
             The path to the RELION STAR file. If the path does not exist
             and `mode = 'w'`, an empty dataset will be created.
-        - `path_to_relion_project`: The path to the RELION project directory.
         - `mode`:
             - If `mode = 'w'`, the dataset is prepared to write new
             *parameters*. This is done by storing an empty dataset in
@@ -301,7 +290,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                 returns a [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/)
                 class. Use this argument when it is desired to customize the `image_config`
                 returned from this class, i.e.
-                `value = parameter_file[0:7]; print(value["image_config])`.
+                `value = parameter_file[0:7]; print(value["image_config"])`.
         """  # noqa: E501
         # Private attributes
         self._options = _dict_to_options(options)
@@ -1021,7 +1010,9 @@ def _load_starfile_data(
             starfile_data = read_starfile(path_to_starfile)
             _validate_starfile_data(starfile_data)
             if selection_filter is not None:
-                starfile_data = _select_particles(starfile_data, selection_filter)
+                starfile_data["particles"] = _select_particles(
+                    starfile_data["particles"], selection_filter
+                )
         else:
             raise FileNotFoundError(
                 f"Set `mode = '{mode}'`, but STAR file {str(path_to_starfile)} does not "
@@ -1061,63 +1052,6 @@ def _load_starfile_data(
     return _StarfileData(
         optics=starfile_data["optics"], particles=starfile_data["particles"]
     )
-
-
-def _validate_mode(mode: str) -> Literal["r", "w"]:
-    if mode not in ["r", "w"]:
-        raise ValueError(
-            f"Passed unsupported `mode = {mode}`. Supported modes are 'r' and 'w'."
-        )
-    return mode  # type: ignore
-
-
-def _select_particles(
-    starfile_data: dict[str, pd.DataFrame], selection_filter: dict[str, Callable]
-) -> dict[str, pd.DataFrame]:
-    particle_data = starfile_data["particles"]
-    boolean_mask = pd.Series(True, index=particle_data.index)
-    for key in selection_filter:
-        if key in particle_data.columns:
-            fn = selection_filter[key]
-            column = particle_data[key]
-            base_error_message = (
-                f"Error filtering key '{key}' in the `selection_filter`. "
-                f"To filter the STAR file entries, `selection_filter['{key}']`"
-                "must be a function that takes in an array and returns a "
-                "boolean mask."
-            )
-            if isinstance(selection_filter[key], Callable):
-                try:
-                    mask_at_column = fn(column)
-                except Exception as err:
-                    raise ValueError(
-                        f"{base_error_message} "
-                        "When calling the function, caught an error:\n"
-                        f"{err}"
-                    )
-                if not pd.api.types.is_bool_dtype(mask_at_column):
-                    raise ValueError(
-                        f"{base_error_message} "
-                        "Found that the function did not return "
-                        "a boolean dtype."
-                    )
-            else:
-                raise ValueError(base_error_message)
-            # Update mask
-            boolean_mask = mask_at_column & boolean_mask
-        else:
-            raise ValueError(
-                f"Included key '{key}' in the `selection_filter`, "
-                "but this entry could not be found in the STAR file. "
-                "The `selection_filter` must be a dictionary whose "
-                "keys are strings in the STAR file and whose values "
-                "are functions that take in columns and return boolean "
-                "masks."
-            )
-    # Select particles using mask
-    starfile_data["particles"] = particle_data[boolean_mask]
-
-    return starfile_data
 
 
 #
@@ -1281,61 +1215,6 @@ def _make_pose(offset_x, offset_y, phi, theta, psi):
     return _make_fn(offset_x, offset_y, phi, theta, psi)
 
 
-def _make_envelope_function(amp, b_factor):
-    if b_factor is None and amp is None:
-        warnings.warn(
-            "`loads_envelope` was set to True, but no envelope parameters were found. "
-            "Setting envelope as None. "
-            "Make sure your starfile is correctly formatted or set "
-            "`loads_envelope=False`."
-        )
-        return None
-
-    elif b_factor is None and amp is not None:
-        return eqx.tree_at(lambda x: x.value, FourierConstant(1.0), amp)
-    else:
-        if amp is None:
-            amp = np.asarray(1.0) if b_factor.ndim == 0 else np.ones_like(b_factor)
-        return eqx.tree_at(
-            lambda x: (x.amplitude, x.b_factor),
-            FourierGaussian(1.0, 1.0),
-            (amp, b_factor),
-        )
-
-
-def _make_transfer_theory(defocus, astig, angle, sph, ac, ps, env=None):
-    ctf = eqx.tree_at(
-        lambda x: (
-            x.defocus_in_angstroms,
-            x.astigmatism_in_angstroms,
-            x.astigmatism_angle,
-            x.spherical_aberration_in_mm,
-        ),
-        AstigmaticCTF(),
-        (defocus, astig, angle, sph),
-    )
-    transfer_theory = ContrastTransferTheory(
-        ctf, envelope=env, amplitude_contrast_ratio=0.1, phase_shift=0.0
-    )
-
-    return eqx.tree_at(
-        lambda x: (x.amplitude_contrast_ratio, x.phase_shift), transfer_theory, (ac, ps)
-    )
-
-
-def _invert_rotation(pose: EulerAnglePose) -> EulerAnglePose:
-    negate_angle = lambda angle: ((-angle + 180) % 360) - 180
-    return eqx.tree_at(
-        lambda x: (x.phi_angle, x.theta_angle, x.psi_angle),
-        pose,
-        (
-            negate_angle(pose.psi_angle),
-            negate_angle(pose.theta_angle),
-            negate_angle(pose.phi_angle),
-        ),
-    )
-
-
 def _load_image_stack_from_mrc(
     shape: tuple[int, int],
     particle_dataframe_at_index: pd.DataFrame,
@@ -1387,37 +1266,6 @@ def _load_image_stack_from_mrc(
             )
 
     return image_stack
-
-
-def _validate_dataset_index(cls, index, n_rows):
-    index_error_msg = lambda idx: (
-        f"The index at which the `{cls.__name__}` was accessed was out of bounds! "
-        f"The number of rows in the dataset is {n_rows}, but you tried to "
-        f"access the index {idx}."
-    )
-    # ... pandas has bad error messages for its indexing
-    if isinstance(index, (int, np.integer)):  # type: ignore
-        if index > n_rows - 1:
-            raise IndexError(index_error_msg(index))
-    elif isinstance(index, slice):
-        if index.start is not None and index.start > n_rows - 1:
-            raise IndexError(index_error_msg(index.start))
-    elif isinstance(index, np.ndarray):
-        if index.size == 0:
-            raise IndexError(
-                "Found that the index passed to the dataset "
-                "was an empty numpy array. Please pass a "
-                "supported index."
-            )
-    else:
-        raise IndexError(
-            f"Indexing with the type {type(index)} is not supported by "
-            f"`{cls.__name__}`. Indexing by integers is supported, one-dimensional "
-            "fancy indexing is supported, and numpy-array indexing is supported. "
-            "For example, like `particle = particle_dataset[0]`, "
-            "`particle_stack = particle_dataset[0:5]`, "
-            "or `particle_stack = dataset[np.array([1, 4, 3, 2])]`."
-        )
 
 
 def _validate_starfile_data(starfile_data: dict[str, pd.DataFrame]):
@@ -1766,36 +1614,6 @@ def _dict_to_mrcfile_options(d: dict[str, Any]) -> _MrcfileOptions:
         n_characters=n_characters,
         overwrite=overwrite,
         compression=compression,
-    )
-
-
-def _dict_to_options(d: dict[str, Any]) -> _Options:
-    _options_keys = {
-        "loads_metadata",
-        "loads_envelope",
-        "updates_optics_group",
-        "make_image_config",
-    }
-    if not set(d.keys()).issubset(_options_keys):
-        raise ValueError(
-            "Expected that dictionary `options` passed to "
-            "`RelionParticleParameterFile(..., options=...)` "
-            f"had a subset of keys {_options_keys}, but found that it "
-            f"had keys {set(d.keys())}."
-        )
-    loads_metadata = d["loads_metadata"] if "loads_metadata" in d else False
-    loads_envelope = d["loads_envelope"] if "loads_envelope" in d else False
-    updates_optics_group = (
-        d["updates_optics_group"] if "updates_optics_group" in d else False
-    )
-    make_image_config = (
-        d["make_image_config"] if "make_image_config" in d else _default_make_image_config
-    )
-    return _Options(
-        loads_metadata=loads_metadata,
-        loads_envelope=loads_envelope,
-        updates_optics_group=updates_optics_group,
-        make_image_config=make_image_config,
     )
 
 
