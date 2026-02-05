@@ -91,7 +91,7 @@ CryoSPAX implements interfaces for reading/writing to common cryo-EM software fr
             - write_images
             - parameter_file
             - path_to_relion_project
-            - mrcfile_settings
+            - mrcfile_options
             - only_images
 
 ## Basic I/O
