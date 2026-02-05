@@ -814,7 +814,6 @@ def test_write_particle_batched_particle_parameters():
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="dummy.star",
         exist_ok=True,
-        updates_optics_group=True,
     )
 
     new_parameters_file.path_to_starfile = (
@@ -864,14 +863,12 @@ def test_write_starfile_different_envs():
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         exist_ok=True,
-        updates_optics_group=True,
     )
 
     particle_params = _make_particle_params(im.FourierConstant(1.0))
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         exist_ok=True,
-        updates_optics_group=True,
     )
     new_parameters_file.append(particle_params)
     new_parameters_file.save(overwrite=True)
@@ -880,7 +877,6 @@ def test_write_starfile_different_envs():
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         exist_ok=True,
-        updates_optics_group=True,
     )
     new_parameters_file.append(particle_params)
     new_parameters_file.save(overwrite=True)
@@ -890,7 +886,6 @@ def test_write_starfile_different_envs():
         new_parameters_file = RelionParticleParameterFile.empty(
             path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
             exist_ok=True,
-            updates_optics_group=True,
         )
         new_parameters_file.append(particle_params)
         new_parameters_file.save(overwrite=True)
@@ -1036,7 +1031,6 @@ def test_append_relion_stack_dataset():
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         path_to_relion_project="tests/outputs/starfile_writing/",
         exist_ok=True,
-        updates_optics_group=True,
         mrcfile_options={"overwrite": False},
     )
 

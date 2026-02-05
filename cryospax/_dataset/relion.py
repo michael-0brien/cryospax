@@ -333,19 +333,19 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         *,
         exist_ok: bool = False,
         num_particles: int = 0,
-        updates_optics_group: bool = True,
     ) -> Self:
         """Convenience wrapper for
-        [`cryospax.RelionParticleParameterFile.__init__`][] using
-        arguments relevant for `mode = 'w'` and writing parameters
-        via `parameter_file[index] = parameter_info`.
+        [`cryospax.RelionParticleParameterFile.__init__`][] in
+        `mode = 'w'` and writing via
+        `parameter_file[index] = parameter_info` or
+        `parameter_file.append(parameter_info)`.
         """
         return cls(
             path_to_starfile,
             mode="w",
             exist_ok=exist_ok,
             num_particles=num_particles,
-            options={"updates_optics_group": updates_optics_group},
+            options={"updates_optics_group": True},
         )
 
     @classmethod
@@ -354,14 +354,17 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         path_to_starfile: str | pathlib.Path,
         *,
         selection_filter: dict[str, Callable] = {},
+        # For loading via `value = dataset[index]`
         loads_metadata: bool = False,
         loads_envelope: bool = False,
         make_image_config: MakeImageConfig = default_make_image_config,
+        # For writing via `dataset[index] = value`
+        updates_optics_group: bool = True,
     ) -> Self:
         """Convenience wrapper for
-        [`cryospax.RelionParticleParameterFile.__init__`][] using
-        arguments relevant for `mode = 'r'` and reading parameters
-        via `parameter_info = parameter_file[index]`
+        [`cryospax.RelionParticleParameterFile.__init__`][] in
+        `mode = 'r'` and reading via `parameter_info = parameter_file[index]`
+        or writing via `parameter_file[index] = parameter_info`.
         """
         return cls(
             path_to_starfile,
@@ -371,6 +374,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                 "loads_metadata": loads_metadata,
                 "loads_envelope": loads_envelope,
                 "make_image_config": make_image_config,
+                "updates_optics_group": updates_optics_group,
             },
         )
 
@@ -799,12 +803,12 @@ class RelionParticleDataset(
         *,
         exist_ok: bool = False,
         num_particles: int = 0,
-        updates_optics_group: bool = True,
         mrcfile_options: dict[str, Any] = {},
     ) -> Self:
         """Convenience wrapper for intializing a new
         [`cryospax.RelionParticleDataset`][] in `mode = 'w'`
-        and writing via `dataset[index] = particle_info`.
+        and writing via `dataset[index] = particle_info` or
+        `dataset.append(particle_info)`.
 
         See [`cryospax.RelionParticleParameterFile.__init__`][]
         and [`cryospax.RelionParticleDataset.__init__`][]
@@ -814,7 +818,6 @@ class RelionParticleDataset(
             path_to_starfile,
             exist_ok=exist_ok,
             num_particles=num_particles,
-            updates_optics_group=updates_optics_group,
         )
         return cls(
             parameter_file,
@@ -830,14 +833,19 @@ class RelionParticleDataset(
         path_to_relion_project: str | pathlib.Path,
         *,
         selection_filter: dict[str, Callable] = {},
+        # For loading via `value = dataset[index]`
         loads_metadata: bool = False,
         loads_envelope: bool = False,
         make_image_config: MakeImageConfig = default_make_image_config,
         only_images: bool = False,
+        # For writing via `dataset[index] = value`
+        updates_optics_group: bool = True,
+        mrcfile_options: dict[str, Any] = {},
     ) -> Self:
         """Convenience wrapper for loading a
         [`cryospax.RelionParticleDataset`][] in `mode = 'r'`
-        and reading via `particle_info = dataset[index]`.
+        and reading via `particle_info = dataset[index]` or
+        writing via `dataset[index] = particle_info`.
 
         See [`cryospax.RelionParticleParameterFile.__init__`][]
         and [`cryospax.RelionParticleDataset.__init__`][]
@@ -849,9 +857,14 @@ class RelionParticleDataset(
             loads_metadata=loads_metadata,
             loads_envelope=loads_envelope,
             make_image_config=make_image_config,
+            updates_optics_group=updates_optics_group,
         )
         return cls(
-            parameter_file, path_to_relion_project, mode="r", only_images=only_images
+            parameter_file,
+            path_to_relion_project,
+            mode="r",
+            only_images=only_images,
+            mrcfile_options=mrcfile_options,
         )
 
     @override
