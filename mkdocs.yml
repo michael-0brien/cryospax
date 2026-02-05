@@ -48,6 +48,7 @@ plugins:
             - numpy.ndarray
             - equinox.Module
             - pandas.DataFrame
+            - cryojax.simulator.BasicImageConfig
     - mkdocstrings:
         handlers:
           python:
