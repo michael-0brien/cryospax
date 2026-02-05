@@ -33,6 +33,7 @@ from .common import (
     _make_transfer_theory,
     _validate_dataset_index,
     _validate_mode,
+    _select_particles
 )
 
 
@@ -346,25 +347,44 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
     def mode(self) -> Literal["r", "w"]:
         return self._mode  # type: ignore
 
+
     @property
     @override
     def loads_metadata(self) -> bool:
-        return self._loads_metadata
+        """Whether or not to load the following information:
+
+        ```python
+        parameter_info = parameter_file[index]
+        assert "metadata" in parameter_info  # True
+        ```
+
+        The `metadata` is a `pandas.DataFrame` that includes the
+        the STAR file rows *not* loaded by the `parameter_file`.
+        For example, 'rlnClassNumber'.
+        """
+        return self._options["loads_metadata"]
 
     @loads_metadata.setter
     @override
     def loads_metadata(self, value: bool):
-        self._loads_metadata = value
+        self._options["loads_metadata"] = value
 
     @property
     @override
     def loads_envelope(self) -> bool:
-        return self._loads_envelope
+        """Whether or not to load the following information:
+
+        ```python
+        parameter_info = parameter_file[index]
+        assert parameter_info["transfer_theory"].envelope is not None  # True
+        ```
+        """
+        return self._options["loads_envelope"]
 
     @loads_envelope.setter
     @override
     def loads_envelope(self, value: bool):
-        self._loads_envelope = value
+        self._options["loads_envelope"] = value
 
     @property
     @override
@@ -410,6 +430,17 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
         raise NotImplementedError(
             "saving is not supported for CryoSparcParticleParameterFile"
         )
+    @property
+    def make_image_config(self) -> MakeImageConfig:
+        """A function that returns a
+        [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/)
+        with signature `make_image_config(shape, pixel_size, voltage_in_kilovolts)`.
+        """  # noqa: E501
+        return self._options["make_image_config"]
+
+    @make_image_config.setter
+    def make_image_config(self, value: MakeImageConfig):
+        self._options["make_image_config"] = value
 
 
 class CryoSparcParticleDataset(
@@ -628,6 +659,8 @@ class CryoSparcParticleDataset(
         self._just_images = value
 
 
+
+
 def _load_csfile_data(
     path_to_csfile: pathlib.Path,
     selection_filter: dict[str, Callable] | None,
@@ -641,54 +674,6 @@ def _load_csfile_data(
         raise FileNotFoundError(
             f"CryoSparc parameters file {str(path_to_csfile)} does not exist."
         )
-
-    return csfile_data
-
-
-def _select_particles(
-    csfile_data: pd.DataFrame, selection_filter: dict[str, Callable]
-) -> pd.DataFrame:
-    boolean_mask = pd.Series(True, index=csfile_data.index)
-    for key in selection_filter:
-        if key in csfile_data.columns:
-            fn = selection_filter[key]
-            column = csfile_data[key]
-            base_error_message = (
-                f"Error filtering key '{key}' in the `selection_filter`. "
-                f"To filter the STAR file entries, `selection_filter['{key}']`"
-                "must be a function that takes in an array and returns a "
-                "boolean mask."
-            )
-            if isinstance(selection_filter[key], Callable):
-                try:
-                    mask_at_column = fn(column)
-                except Exception as err:
-                    raise ValueError(
-                        f"{base_error_message} "
-                        "When calling the function, caught an error:\n"
-                        f"{err}"
-                    )
-                if not pd.api.types.is_bool_dtype(mask_at_column):
-                    raise ValueError(
-                        f"{base_error_message} "
-                        "Found that the function did not return "
-                        "a boolean dtype."
-                    )
-            else:
-                raise ValueError(base_error_message)
-            # Update mask
-            boolean_mask = mask_at_column & boolean_mask
-        else:
-            raise ValueError(
-                f"Included key '{key}' in the `selection_filter`, "
-                "but this entry could not be found in the CryoSparc metadata file. "
-                "The `selection_filter` must be a dictionary whose "
-                "keys are strings in the STAR file and whose values "
-                "are functions that take in columns and return boolean "
-                "masks."
-            )
-    # Select particles using mask
-    csfile_data = csfile_data[boolean_mask]
 
     return csfile_data
 
@@ -780,11 +765,8 @@ def _make_pytrees_from_csfile(
         csparc_pose_angles = np.array([0.0, 0.0, 0.0])
 
     csparc_pose_angles = np.rad2deg(csparc_pose_angles)
-    # Now transform the angles and shift to the AxisAnglePose convention
-    if len(batch_shape) > 0:
-        pose_shift = csparc_pose_shift * pixel_size[:, None]
-    else:
-        pose_shift = csparc_pose_shift * pixel_size
+    # Now transform the angles and shift to the AxisAnglePose convention 
+    pose_shift = csparc_pose_shift * pixel_size
 
     # Now, flip the sign of the translations and transpose rotations.
     maybe_make_full = lambda param: (
@@ -819,7 +801,7 @@ def _make_pytrees_from_csfile(
         transfer_theory = _make_transfer_theory(*transfer_theory_params)  # type: ignore
 
         # ... finally the `AxisAnglePose`
-        pose = _invert_rotation(_make_pose(*pose_params))
+        pose = _make_pose(*pose_params)
 
     # Now, convert arrays to numpy in case the user wishes to do preprocessing
     pytree_dynamic, pytree_static = eqx.partition(
@@ -839,7 +821,7 @@ def _make_pose(shift, euler_vector):
     )
     if shift.ndim == 2:
         _make_fn = eqx.filter_vmap(_make_fn)
-    return _make_fn(shift, euler_vector)
+    return _invert_rotation(_make_fn(shift, euler_vector))
 
 
 def _invert_rotation(pose: AxisAnglePose) -> AxisAnglePose:

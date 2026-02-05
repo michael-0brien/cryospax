@@ -35,6 +35,7 @@ from .common import (
     _make_transfer_theory,
     _validate_dataset_index,
     _validate_mode,
+    _select_particles
 )
 
 
@@ -112,10 +113,10 @@ else:
 
         images: Float[np.ndarray, "... y_dim x_dim"]
         parameters: NotRequired[_ParticleParameterInfo]
+
     class _StarfileData(TypedDict):
         optics: pd.DataFrame
         particles: pd.DataFrame
-
 
     _ParticleParameterLike = dict[str, Any] | _ParticleParameterInfo
     _ParticleStackLike = dict[str, Any] | _ParticleStackInfo
@@ -1010,7 +1011,9 @@ def _load_starfile_data(
             starfile_data = read_starfile(path_to_starfile)
             _validate_starfile_data(starfile_data)
             if selection_filter is not None:
-                starfile_data = _select_particles(starfile_data, selection_filter)
+                starfile_data["particles"] = _select_particles(
+                    starfile_data["particles"], selection_filter
+                )
         else:
             raise FileNotFoundError(
                 f"Set `mode = '{mode}'`, but STAR file {str(path_to_starfile)} does not "
@@ -1050,56 +1053,6 @@ def _load_starfile_data(
     return _StarfileData(
         optics=starfile_data["optics"], particles=starfile_data["particles"]
     )
-
-
-def _select_particles(
-    starfile_data: dict[str, pd.DataFrame], selection_filter: dict[str, Callable]
-) -> dict[str, pd.DataFrame]:
-    particle_data = starfile_data["particles"]
-    boolean_mask = pd.Series(True, index=particle_data.index)
-    for key in selection_filter:
-        if key in particle_data.columns:
-            fn = selection_filter[key]
-            column = particle_data[key]
-            base_error_message = (
-                f"Error filtering key '{key}' in the `selection_filter`. "
-                f"To filter the STAR file entries, `selection_filter['{key}']`"
-                "must be a function that takes in an array and returns a "
-                "boolean mask."
-            )
-            if isinstance(selection_filter[key], Callable):
-                try:
-                    mask_at_column = fn(column)
-                except Exception as err:
-                    raise ValueError(
-                        f"{base_error_message} "
-                        "When calling the function, caught an error:\n"
-                        f"{err}"
-                    )
-                if not pd.api.types.is_bool_dtype(mask_at_column):
-                    raise ValueError(
-                        f"{base_error_message} "
-                        "Found that the function did not return "
-                        "a boolean dtype."
-                    )
-            else:
-                raise ValueError(base_error_message)
-            # Update mask
-            boolean_mask = mask_at_column & boolean_mask
-        else:
-            raise ValueError(
-                f"Included key '{key}' in the `selection_filter`, "
-                "but this entry could not be found in the STAR file. "
-                "The `selection_filter` must be a dictionary whose "
-                "keys are strings in the STAR file and whose values "
-                "are functions that take in columns and return boolean "
-                "masks."
-            )
-    # Select particles using mask
-    starfile_data["particles"] = particle_data[boolean_mask]
-
-    return starfile_data
-
 
 #
 # STAR file reading

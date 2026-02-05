@@ -53,15 +53,25 @@ def write_starfile(starfile_data, filename: str | pathlib.Path, **kwargs: Any):
 
 
 def read_csparc_data(
-    path_to_csparc_metadata: pathlib.Path,
+    filename: pathlib.Path,
 ) -> pd.DataFrame:
-    _validate_filename(path_to_csparc_metadata, mode="r", suffix="cs")
+    """Read a CryoSPARC `.cs` file using `numpy`.
 
-    metadata = np.load(path_to_csparc_metadata, allow_pickle=True)
-    data_entries = [metadata.dtype.names[i] for i in range(len(metadata.dtype.names))]
+    **Arguments:**
+
+    - `filename`:
+        The path where to read the CryoSPARC file. This must include
+        a '.cs' extension.
+
+    Each entry in this file is used to populate the columns of a `pandas.DataFrame`.
+    """
+    _validate_filename(filename, mode="r", suffix="cs")
+
+    csfile_data = np.load(filename, allow_pickle=True)
+    data_entries = [csfile_data.dtype.names[i] for i in range(len(csfile_data.dtype.names))]
     csparc_data = pd.DataFrame(
         {
-            entry: [metadata[j][entry] for j in range(len(metadata))]
+            entry: [csfile_data[j][entry] for j in range(len(csfile_data))]
             for entry in data_entries
         }
     )

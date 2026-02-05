@@ -1,9 +1,4 @@
-"""
-Check coverage with
-pytest --cov-report term-missing:skip-covered --cov=src/cryojax/data/_relion tests/test_relion_dataset.py
-"""  # noqa
-
-import os
+)import os
 import shutil
 from functools import partial
 from typing import cast

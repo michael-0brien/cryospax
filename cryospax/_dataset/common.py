@@ -7,6 +7,7 @@ import equinox as eqx
 import numpy as np
 from cryojax.ndimage import FourierConstant, FourierGaussian
 from cryojax.simulator import AstigmaticCTF, BasicImageConfig, ContrastTransferTheory
+import pandas as pd
 
 
 MakeImageConfig = Callable[
@@ -29,7 +30,8 @@ class _MrcfileSettings(TypedDict):
     overwrite: bool
     compression: str | None
 
-
+#
+# Functions for validating and definition of class attributes
 def _default_make_image_config(shape, pixel_size, voltage_in_kilovolts):
     """Default implementation for generating an `image_config`
     from parameters and the image shape. Additional options passed
@@ -79,6 +81,7 @@ def _dict_to_options(d: dict[str, Any]) -> _Options:
         make_image_config=make_image_config,
     )
 
+# Functions for particle reading
 
 def _validate_dataset_index(cls, index, n_rows):
     index_error_msg = lambda idx: (
@@ -151,3 +154,52 @@ def _make_transfer_theory(defocus, astig, angle, sph, ac, ps, env=None):
     return eqx.tree_at(
         lambda x: (x.amplitude_contrast_ratio, x.phase_shift), transfer_theory, (ac, ps)
     )
+
+def _select_particles(
+    particle_data: pd.DataFrame, selection_filter: dict[str, Callable]
+) -> pd.DataFrame:
+
+    boolean_mask = pd.Series(True, index=particle_data.index)
+    for key in selection_filter:
+        if key in particle_data.columns:
+            fn = selection_filter[key]
+            column = particle_data[key]
+            base_error_message = (
+                f"Error filtering key '{key}' in the `selection_filter`. "
+                f"To filter the  entries in the particle parameter file, "
+                f"`selection_filter['{key}']`"
+                "must be a function that takes in an array and returns a "
+                "boolean mask."
+            )
+            if isinstance(selection_filter[key], Callable):
+                try:
+                    mask_at_column = fn(column)
+                except Exception as err:
+                    raise ValueError(
+                        f"{base_error_message} "
+                        "When calling the function, caught an error:\n"
+                        f"{err}"
+                    )
+                if not pd.api.types.is_bool_dtype(mask_at_column):
+                    raise ValueError(
+                        f"{base_error_message} "
+                        "Found that the function did not return "
+                        "a boolean dtype."
+                    )
+            else:
+                raise ValueError(base_error_message)
+            # Update mask
+            boolean_mask = mask_at_column & boolean_mask
+        else:
+            raise ValueError(
+                f"Included key '{key}' in the `selection_filter`, "
+                "but this entry could not be found in the CryoSparc metadata file. "
+                "The `selection_filter` must be a dictionary whose "
+                "keys are strings in the STAR file and whose values "
+                "are functions that take in columns and return boolean "
+                "masks."
+            )
+    # Select particles using mask
+    particle_data = particle_data[boolean_mask]
+
+    return particle_data
