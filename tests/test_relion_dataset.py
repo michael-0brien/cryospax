@@ -418,9 +418,9 @@ def test_no_load_parameters(sample_starfile_path, sample_relion_project_path):
     dataset = RelionParticleDataset(parameter_file, sample_relion_project_path)
 
     # For particle stack with leading dim
-    dataset.just_images = False
+    dataset.only_images = False
     particle_stack_params = dataset[:]
-    dataset.just_images = True
+    dataset.only_images = True
     particle_stack_noparams = dataset[:]
 
     assert "parameters" not in particle_stack_noparams
@@ -430,9 +430,9 @@ def test_no_load_parameters(sample_starfile_path, sample_relion_project_path):
     assert isinstance(particle_stack_params["images"], np.ndarray)
 
     # For particle stack with no leading dim
-    dataset.just_images = False
+    dataset.only_images = False
     particle_stack_params = dataset[0]
-    dataset.just_images = True
+    dataset.only_images = True
     particle_stack_noparams = dataset[0]
     assert (
         particle_stack_params["images"].shape == particle_stack_noparams["images"].shape
