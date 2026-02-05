@@ -97,6 +97,7 @@ if hasattr(typing, "GENERATING_DOCUMENTATION"):
     _MrcfileOptions = dict[str, Any]  # pyright: ignore[reportAssignmentType]
 
 else:
+    from .common import _MrcfileOptions
 
     class _ParticleParameterInfo(TypedDict):
         """Parameters for a particle stack from RELION."""

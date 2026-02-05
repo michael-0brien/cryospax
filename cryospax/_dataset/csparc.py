@@ -77,10 +77,10 @@ if hasattr(typing, "GENERATING_DOCUMENTATION"):
     _ParticleParameterLike = dict[str, Any]  # pyright: ignore[reportAssignmentType]
     _ParticleStackLike = dict[str, Any]  # pyright: ignore[reportAssignmentType]
     _Options = dict[str, Any]  # pyright: ignore[reportAssignmentType]
-    _MrcfileSettings = dict[str, Any]  # pyright: ignore[reportAssignmentType]
+    _MrcfileOptions = dict[str, Any]  # pyright: ignore[reportAssignmentType]
 
 else:
-    from .common import _MrcfileSettings
+    from .common import _MrcfileOptions
 
     class _ParticleParameterInfo(TypedDict):
         """Parameters for a particle stack from RELION."""
@@ -458,7 +458,7 @@ class CryoSparcParticleDataset(
         mode: Literal["r", "w"] = "r",
         *,
         mrcfile_settings: dict[str, Any] = {},
-        just_images: bool = False,
+        only_images: bool = False,
     ):
         """**Arguments:**
 
@@ -475,7 +475,7 @@ class CryoSparcParticleDataset(
         - mrcfile_settings:
             Currently not used for this type of dataset
             as writing mode is not implemented.
-        - `just_images`:
+        - `only_images`:
             If `False`, load parameters and images. Otherwise, load only images.
 
         """
@@ -493,7 +493,7 @@ class CryoSparcParticleDataset(
         # ... properties common to reading and writing images
         self._path_to_relion_project = pathlib.Path(path_to_relion_project)
         # ... properties for reading images
-        self._just_images = just_images
+        self._only_images = only_images
         # ... properties for writing images
         self._mrcfile_settings = mrcfile_settings
         # Now, initialize for `mode = 'r'` vs `mode = 'w'`
@@ -519,9 +519,9 @@ class CryoSparcParticleDataset(
         - 'parameters':
             See [`cryospax.CryoSparcParticleParameterFile`][] for more
             information. This key is not included if
-            `just_images = True`.
+            `only_images = True`.
         """  # noqa: E501
-        if not self.just_images:
+        if not self.only_images:
             # Load images and parameters. First, read parameters
             # and metadata from the .cs file
             loads_metadata = self.parameter_file.loads_metadata
@@ -625,7 +625,7 @@ class CryoSparcParticleDataset(
         return self._path_to_relion_project
 
     @property
-    def mrcfile_settings(self) -> _MrcfileSettings:
+    def mrcfile_settings(self) -> _MrcfileOptions:
         """Settings for writing MRC files with. See
         [`cryospax.CryoSparcParticleDataset.__init__`][]
         for more information.
@@ -639,22 +639,22 @@ class CryoSparcParticleDataset(
         )
 
     @property
-    def just_images(self) -> bool:
+    def only_images(self) -> bool:
         """If `True`, load images and *not* parameters. This gives
         better performance when it is not necessary to load parameters.
 
         ```python
-        dataset.just_images = True
+        dataset.only_images = True
         particle_info = dataset[0]
         assert "images" in particle_info  # True
         assert "parameters" not in particle_info  # True
         ```
         """
-        return self._just_images
+        return self._only_images
 
-    @just_images.setter
-    def just_images(self, value: bool):
-        self._just_images = value
+    @only_images.setter
+    def only_images(self, value: bool):
+        self._only_images = value
 
 
 def _load_csfile_data(

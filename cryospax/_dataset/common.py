@@ -22,7 +22,7 @@ class _Options(TypedDict):
     make_image_config: MakeImageConfig
 
 
-class _MrcfileSettings(TypedDict):
+class _MrcfileOptions(TypedDict):
     prefix: str
     output_folder: str | pathlib.Path
     n_characters: int
