@@ -41,7 +41,7 @@ def test_write_simulated_image_stack_from_starfile_jit(sample_starfile_path):
         parameter_file,
         path_to_relion_project="tests/outputs/starfile_writing/",
         mode="w",
-        mrcfile_settings={"overwrite": True},
+        mrcfile_options={"overwrite": True},
     )
 
     simulate_particle_stack(
@@ -121,7 +121,7 @@ def test_write_simulated_image_stack_from_starfile_nojit(sample_starfile_path):
         parameter_file,
         path_to_relion_project="tests/outputs/starfile_writing/",
         mode="w",
-        mrcfile_settings={"overwrite": True},
+        mrcfile_options={"overwrite": True},
     )
 
     simulate_particle_stack(
@@ -158,7 +158,7 @@ def test_write_single_image(sample_starfile_path):
         return image / jnp.linalg.norm(image)
 
     selection_filter = {
-        "rlnImageName": lambda x: np.where(x == "0000001@000000.mrcs", True, False)
+        "rlnImageName": lambda x: np.where(x == "0000001@img_00000.mrcs", True, False)
     }
     """Test writing a simulated image stack from a starfile."""
     parameter_file = RelionParticleParameterFile(
@@ -176,7 +176,7 @@ def test_write_single_image(sample_starfile_path):
         parameter_file,
         path_to_relion_project="tests/outputs/starfile_writing/",
         mode="w",
-        mrcfile_settings={"overwrite": True},
+        mrcfile_options={"overwrite": True},
     )
 
     n_images = 1
@@ -249,7 +249,7 @@ def test_load_multiple_mrcs():
         parameters_file,
         path_to_relion_project="tests/outputs/starfile_writing/",
         mode="w",
-        mrcfile_settings={"overwrite": True},
+        mrcfile_options={"overwrite": True},
     )
 
     # Create a simulated image stack
