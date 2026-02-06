@@ -1316,7 +1316,7 @@ def _load_starfile_data(
                 optics_data["rlnOpticsGroup"].max().item(),
             )
             if pd.isna(max_optics_group_index):
-                raise IOError(
+                raise OSError(
                     "Tried to parse the optics group 'rlnOpticsGroup' column to "
                     "retrieve its maximum value, but found that "
                     "it had a NaN value. Make sure that your STAR file is correctly "
