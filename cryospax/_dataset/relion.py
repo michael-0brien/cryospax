@@ -190,6 +190,16 @@ class AbstractRelionParticleParameterFile(
 
     @property
     @abc.abstractmethod
+    def max_optics_groups(self) -> int:
+        raise NotImplementedError
+
+    @max_optics_groups.setter
+    @abc.abstractmethod
+    def max_optics_groups(self, value: int):
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
     def loads_metadata(self) -> bool:
         raise NotImplementedError
 
@@ -228,6 +238,7 @@ class AbstractRelionParticleParameterFile(
         `parameter_file.loads_metadata = True` and accessing this as
         `parameter_info = parameter_file[...]; metadata = parameter_info["metadata"]`.
         """
+        _validate_dataset_index(type(self), index, len(self))
         particle_data_at_index = self.particle_data.iloc[index]
         # ... convert to dataframe for serialization
         if isinstance(particle_data_at_index, pd.Series):
@@ -593,7 +604,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             if not path_to_starfile.parent.exists():
                 path_to_starfile.parent.mkdir(parents=True)
             starfile_data = _StarfileData(
-                particles=self.particle_data, optics=self.optics_data
+                particles=self.particle_data,
+                optics=self.optics_data.iloc[: self.num_optics_groups],
             )
             write_starfile(starfile_data, path_to_starfile, **kwargs)
 
@@ -640,7 +652,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     @override
     def optics_data(self) -> pd.DataFrame:
         """The `pandas.DataFrame` of optics STAR file entries."""
-        return self._starfile_data["optics"].iloc[: self.num_optics_groups]
+        return self._starfile_data["optics"]
 
     @property
     def num_particles(self) -> int:

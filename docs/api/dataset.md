@@ -45,6 +45,7 @@ Datasets output a pytree that can be passed the JAX transformations. A particula
                 - path_to_starfile
                 - particle_data
                 - optics_data
+                - max_optics_groups
                 - loads_metadata
                 - loads_envelope
                 - updates_optics_group
