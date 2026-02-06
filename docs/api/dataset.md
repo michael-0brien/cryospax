@@ -43,7 +43,8 @@ Datasets output a pytree that can be passed the JAX transformations. A particula
                 - append
                 - save
                 - path_to_starfile
-                - starfile_data
+                - particle_data
+                - optics_data
                 - loads_metadata
                 - loads_envelope
                 - updates_optics_group
@@ -62,7 +63,8 @@ Datasets output a pytree that can be passed the JAX transformations. A particula
             - append
             - copy
             - save
-            - starfile_data
+            - particle_data
+            - optics_data
             - path_to_starfile
             - path_to_output
             - mode
@@ -73,7 +75,7 @@ Datasets output a pytree that can be passed the JAX transformations. A particula
             - loads_envelope
             - updates_optics_group
             - make_image_config
-            - extract_metadata
+            - get_metadata
 
 ## Datasets: parameter and image manipulation
 
@@ -105,6 +107,9 @@ Datasets output a pytree that can be passed the JAX transformations. A particula
             - write_images
             - parameter_file
             - path_to_relion_project
+            - mode
+            - particle_data
+            - optics_data
             - mrcfile_options
             - only_images
 

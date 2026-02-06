@@ -81,9 +81,9 @@ RELION_SUPPORTED_PARTICLE_ENTRIES = [
 ]
 
 
-MakeImageConfig = Callable[
-    [tuple[int, int], np.ndarray | float, np.ndarray | float], BasicImageConfig
-]
+FloatLike = eqxi.doc_repr(float | Float[np.ndarray, ""], "FloatLike")
+
+MakeImageConfig = Callable[[tuple[int, int], FloatLike, FloatLike], BasicImageConfig]
 
 
 if hasattr(typing, "GENERATING_DOCUMENTATION"):
@@ -145,9 +145,7 @@ def _default_make_image_config(shape, pixel_size, voltage_in_kilovolts):
     )
 
 
-default_make_image_config = eqxi.doc_repr(
-    _default_make_image_config, "default_make_image_config"
-)
+default_make_image_config = eqxi.doc_repr(_default_make_image_config, "default_fn")
 
 
 class AbstractRelionParticleParameterFile(
@@ -182,12 +180,12 @@ class AbstractRelionParticleParameterFile(
 
     @property
     @abc.abstractmethod
-    def starfile_data(self) -> _StarfileData:
+    def particle_data(self) -> pd.DataFrame:
         raise NotImplementedError
 
-    @starfile_data.setter
+    @property
     @abc.abstractmethod
-    def starfile_data(self, value: dict[str, pd.DataFrame]):
+    def optics_data(self) -> pd.DataFrame:
         raise NotImplementedError
 
     @property
@@ -220,17 +218,17 @@ class AbstractRelionParticleParameterFile(
     def make_image_config(self, value: MakeImageConfig):
         raise NotImplementedError
 
-    def extract_metadata(
+    def get_metadata(
         self, index: int | slice | Int[np.ndarray, ""] | Int[np.ndarray, " _"]
     ) -> pd.DataFrame:
         """Extract the columns at a given `index` *not* included in the cryoJAX
-        classes loaded when calling `parameter_info = parameter_file[index]`.
+        classes loaded into `parameter_info = parameter_file[index]`.
 
         This method is for advanced usage; prefer setting
         `parameter_file.loads_metadata = True` and accessing this as
         `parameter_info = parameter_file[...]; metadata = parameter_info["metadata"]`.
         """
-        particle_data_at_index = self.starfile_data["particles"].iloc[index]
+        particle_data_at_index = self.particle_data.iloc[index]
         # ... convert to dataframe for serialization
         if isinstance(particle_data_at_index, pd.Series):
             particle_data_at_index = particle_data_at_index.to_frame().T
@@ -430,10 +428,10 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         # Validate index
         _validate_dataset_index(type(self), index, self.num_particles)
         # ... read particle data at the requested indices
-        particle_data = self.starfile_data["particles"]
+        particle_data = self._starfile_data["particles"]
         particle_data_at_index = particle_data.iloc[index]
         # ... read optics group given the particle data
-        optics_data = self.starfile_data["optics"]
+        optics_data = self._starfile_data["optics"]
         optics_group = _get_optics_group_from_particle_data(
             particle_data_at_index, optics_data
         )
@@ -448,7 +446,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             image_config=image_config, pose=pose, transfer_theory=transfer_theory
         )
         if self.loads_metadata:
-            parameter_info["metadata"] = self.extract_metadata(index)
+            parameter_info["metadata"] = self.get_metadata(index)
 
         return parameter_info
 
@@ -495,8 +493,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         _validate_parameters(value, force_keys=False)
         # Grab the current optics and particle data
         particle_data, optics_data = (
-            self.starfile_data["particles"],
-            self.starfile_data["optics"],
+            self._starfile_data["particles"],
+            self._starfile_data["optics"],
         )
         if {"image_config", "transfer_theory"}.issubset(value):
             # Make and set the new optics data
@@ -553,7 +551,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         # Make new optics group
         optics_group_index, optics_array_index = self._increment_optics_group()
         optics_data, optics_data_for_update = (
-            self.starfile_data["optics"],
+            self._starfile_data["optics"],
             _parameters_to_optics_data(value, optics_group_index),
         )
         optics_data.loc[
@@ -562,7 +560,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         ] = optics_data_for_update.values
         # Make new particle entries
         particle_data, particle_data_to_append = (
-            self.starfile_data["particles"],
+            self._starfile_data["particles"],
             _parameters_to_particle_data(value, optics_group_index),
         )
         # Concatenate and set new entries
@@ -594,11 +592,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             # Make directory if it does not exist
             if not path_to_starfile.parent.exists():
                 path_to_starfile.parent.mkdir(parents=True)
-            # Crop to the true number of optics entries, rather than
-            # the overallocated value `max_optics_groups`
             starfile_data = _StarfileData(
-                particles=self.starfile_data["particles"],
-                optics=self.starfile_data["optics"].iloc[: self.num_optics_groups],
+                particles=self.particle_data, optics=self.optics_data
             )
             write_starfile(starfile_data, path_to_starfile, **kwargs)
 
@@ -637,69 +632,60 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
 
     @property
     @override
-    def starfile_data(self) -> _StarfileData:
-        """The `pandas.DataFrame` of STAR file entries."""
-        return self._starfile_data
+    def particle_data(self) -> pd.DataFrame:
+        """The `pandas.DataFrame` of particle STAR file entries."""
+        return self._starfile_data["particles"]
 
-    @starfile_data.setter
+    @property
     @override
-    def starfile_data(self, value: dict[str, pd.DataFrame]):
-        if "particles" in value and "optics" in value:
-            particle_data, optics_data = value["particles"], value["optics"]
-            if isinstance(particle_data, pd.DataFrame) and isinstance(
-                optics_data, pd.DataFrame
-            ):
-                self._starfile_data = _StarfileData(
-                    optics=optics_data, particles=particle_data
-                )
-            else:
-                raise ValueError(
-                    "STAR file data must be a dictionary "
-                    "of pandas DataFrames, with keys equal to "
-                    "'particles' and 'optics'. Found that the "
-                    f"particle data was type `{type(particle_data).__name__}`"
-                    "and the optics data was type "
-                    f"`{type(optics_data).__name__}`."
-                )
-        else:
-            raise ValueError(
-                "STAR file data must be a dictionary "
-                "of pandas DataFrames, with keys equal to "
-                "'particles' and 'optics'. Tried setting "
-                f"with a dictionary with keys {list(value.keys())}."
-            )
+    def optics_data(self) -> pd.DataFrame:
+        """The `pandas.DataFrame` of optics STAR file entries."""
+        return self._starfile_data["optics"].iloc[: self.num_optics_groups]
 
     @property
     def num_particles(self) -> int:
         """The number of particles in the STAR file."""
-        return len(self.starfile_data["particles"])
+        return len(self._starfile_data["particles"])
 
     @property
     def num_optics_groups(self) -> int:
-        """The number of optics groups in the STAR file.
-
-        !!! warning
-
-            This is not always equal to
-            the number of entries in the optics dataframe at
-            `optics_data = parameter_file.starfile_data["optics"]`.
-            Rather, we preallocate entries in the optics group using
-            `parameter_file = RelionParticleParameterFile(..., max_optics_groups=...)`
-            to allow for thread-safe writing. Consequently, `optics_data`
-            can have NaN entries.
-
-            Rather, `parameter_file.num_optics_group` is an
-            internal counter that keeps track of how many optics group
-            entries are not NaN.
-        """
+        """The number of optics groups in the STAR file."""
         return self._num_optics_groups
 
     @property
     def max_optics_groups(self) -> int:
         """The maximum number of optics groups allowed in
         the STAR file.
+
+        !!! info
+
+            Every time parameters are written via
+            `parameter_file[...] = parameter_info` or
+            `parameter_file.append(parameter_info)` a new optics
+            group is created.
+
+            Under the hood, the underlying STAR file
+            data pre-allocates `max_optics_groups` entries for
+            these writes and throws away any extra on calls to
+            `parameter_file.save()`.
         """
         return len(self._starfile_data["optics"])
+
+    @max_optics_groups.setter
+    def max_optics_groups(self, value: int):
+        if self.max_optics_groups < value:
+            optics_data = self._starfile_data["optics"]
+            self._starfile_data["optics"] = optics_data.reindex(index=range(value))
+        elif self.max_optics_groups == value:
+            pass
+        else:
+            raise ValueError(
+                "Tried to set `parameter_file.max_optics_groups = ...`, "
+                "but found that the current `max_optics_groups` "
+                f"({self.max_optics_groups}) is greater than the new "
+                f"value ({value}). Decreasing `max_optics_groups` is "
+                "not supported."
+            )
 
     @property
     @override
@@ -763,7 +749,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                     "`RelionParticleParameterFile.empty(..., max_optics_groups=...)` "
                     "or `RelionParticleParameterFile.load(..., max_optics_groups=...)`."
                 )
-            optics_data = self.starfile_data["optics"]
+            optics_data = self._starfile_data["optics"]
             next_optics_array_index = self._num_optics_groups
             if next_optics_array_index == 0:
                 next_optics_group_index = 1
@@ -840,10 +826,6 @@ class RelionParticleDataset(
         # ... then, the `parameter_file`. If `mode = 'w'` but
         # the images already exist, we should make a copy in case
         # those images are being used elsewhere
-        particle_data, optics_data = (
-            parameter_file.starfile_data["particles"],
-            parameter_file.starfile_data["optics"],
-        )
         self._parameter_file = parameter_file
         # ... properties common to reading and writing images
         self._path_to_relion_project = pathlib.Path(path_to_relion_project)
@@ -852,14 +834,11 @@ class RelionParticleDataset(
         # ... properties for writing images
         self._mrcfile_options = _dict_to_mrcfile_options(mrcfile_options)
         # Now, initialize for `mode = 'r'` vs `mode = 'w'`
-        images_exist = "rlnImageName" in particle_data.columns
+        images_exist = "rlnImageName" in parameter_file.particle_data.columns
         project_exists = self.path_to_relion_project.exists()
         if mode == "w":
             # Write empty "rlnImageName" column (defaults to NaN values)
-            particle_data["rlnImageName"] = pd.Series(dtype=str)
-            self.parameter_file.starfile_data = dict(
-                optics=optics_data, particles=particle_data
-            )
+            parameter_file.particle_data["rlnImageName"] = pd.Series(dtype=str)
             # Make the project directory, if it does not yet exist
             if not project_exists:
                 self.path_to_relion_project.mkdir(parents=True, exist_ok=False)
@@ -978,7 +957,7 @@ class RelionParticleDataset(
             if self.parameter_file.loads_metadata:
                 particle_data_at_index = parameters["metadata"]
             else:
-                particle_data_at_index = self.parameter_file.extract_metadata(index)
+                particle_data_at_index = self.parameter_file.get_metadata(index)
             _validate_rln_image_name_exists(particle_data_at_index, index)
             # ... grab shape
             shape = parameters["image_config"].shape
@@ -997,15 +976,13 @@ class RelionParticleDataset(
             num_particles = len(self.parameter_file)
             _validate_dataset_index(type(self), index, num_particles)
             # ... read particle data at the requested indices
-            particle_data = self.parameter_file.starfile_data["particles"]
-            particle_data_at_index = particle_data.iloc[index]
+            particle_data_at_index = self.parameter_file.particle_data.iloc[index]
             if isinstance(particle_data_at_index, pd.Series):
                 particle_data_at_index = particle_data_at_index.to_frame().T
             _validate_rln_image_name_exists(particle_data_at_index, index)
             # ... grab shape by reading the optics group
-            optics_data = self.parameter_file.starfile_data["optics"]
             optics_group = _get_optics_group_from_particle_data(
-                particle_data_at_index, optics_data
+                particle_data_at_index, self.parameter_file.optics_data
             )
             image_size = int(optics_group["rlnImageSize"])
             shape = (image_size, image_size)
@@ -1084,12 +1061,12 @@ class RelionParticleDataset(
                 "When appending dictionary `foo` as `dataset.append(foo)`, "
                 "`foo` must have key 'parameters'."
             )
-        start = len(self.parameter_file.starfile_data["particles"])
+        start = len(self.parameter_file)
         # Append parameters. This automatically sets the 'rlnImageName'
         # column to NaNs
         self.parameter_file.append(parameters)
         # Write images
-        stop = len(self.parameter_file.starfile_data["particles"])
+        stop = len(self.parameter_file)
         index_array = np.arange(start, stop, dtype=int)
         self.write_images(index_array, images, parameters=parameters)
 
@@ -1107,11 +1084,10 @@ class RelionParticleDataset(
         these APIs are preferred.
         """
         # Get relevant metadata
-        particle_data = self.parameter_file.starfile_data["particles"]
-        optics_data = self.parameter_file.starfile_data["optics"]
+        parameter_file = self.parameter_file
         if parameters is None:
             optics_group = _get_optics_group_from_particle_data(
-                particle_data.iloc[index_array], optics_data
+                parameter_file.particle_data.iloc[index_array], parameter_file.optics_data
             )
             pixel_size, dim = (
                 float(optics_group["rlnImagePixelSize"]),
@@ -1147,15 +1123,15 @@ class RelionParticleDataset(
         # column
         path_to_filename, rln_image_names = _make_image_filename(
             index_array,
-            particle_data,
+            parameter_file.particle_data,
             n_particles,
             self.mrcfile_options,
             self.path_to_relion_project,
         )
         # Set the STAR file column
-        particle_data.loc[particle_data.index[index_array], "rlnImageName"] = (
-            rln_image_names
-        )
+        parameter_file.particle_data.loc[
+            parameter_file.particle_data.index[index_array], "rlnImageName"
+        ] = rln_image_names
         # ... and write the images to disk
         try:
             write_image_stack_to_mrc(
@@ -1187,6 +1163,15 @@ class RelionParticleDataset(
         return self._parameter_file
 
     @property
+    def path_to_relion_project(self) -> pathlib.Path:
+        """The path to the RELION project. Paths in the
+        STAR file are relative to this directory.
+
+        This cannot be modified after initialization.
+        """
+        return self._path_to_relion_project
+
+    @property
     @override
     def mode(self) -> Literal["r", "w"]:
         """Whether or not the `dataset` was
@@ -1197,13 +1182,20 @@ class RelionParticleDataset(
         return self._mode  # type: ignore
 
     @property
-    def path_to_relion_project(self) -> pathlib.Path:
-        """The path to the RELION project. Paths in the
-        STAR file are relative to this directory.
+    def particle_data(self) -> pd.DataFrame:
+        """The `pandas.DataFrame` of particle STAR file entries.
 
-        This cannot be modified after initialization.
+        Alias to [`cryospax.AbstractRelionParticleParameterFile.particle_data`][].
         """
-        return self._path_to_relion_project
+        return self.parameter_file.particle_data
+
+    @property
+    def optics_data(self) -> pd.DataFrame:
+        """The `pandas.DataFrame` of optics STAR file entries.
+
+        Alias to [`cryospax.AbstractRelionParticleParameterFile.optics_data`][].
+        """
+        return self.parameter_file.optics_data
 
     @property
     def mrcfile_options(self) -> _MrcfileOptions:
