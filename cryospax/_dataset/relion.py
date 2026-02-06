@@ -363,6 +363,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             num_particles,
             max_optics_groups,
         )
+        self._lock = threading.Lock()
 
     @classmethod
     def empty(
@@ -750,8 +751,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         self._options["make_image_config"] = value
 
     def _increment_optics_group(self):
-        lock = threading.Lock()
-        with lock:
+        with self._lock:
             if self.num_optics_groups == self.max_optics_groups:
                 raise IndexError(
                     "The number of optics groups in the STAR file exceeded "
