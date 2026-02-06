@@ -1,8 +1,8 @@
 """cryoJAX compatibility with [RELION](https://relion.readthedocs.io/en/release-5.0/)."""
 
 import abc
+import copy
 import pathlib
-import re
 import threading
 import typing
 import warnings
@@ -772,6 +772,24 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             self._num_optics_groups += 1
         return next_optics_group_index, next_optics_array_index
 
+    def __deepcopy__(self, memo):
+        # This is a nasty hack to ensure that this class
+        # works with its `parameter_file.copy()` routine!
+        # The `threading.Lock()` class does not work under
+        # `deepcopy`, so we need to manually reset it.
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+
+        for k, v in self.__dict__.items():
+            if k == "_lock":
+                continue
+            setattr(result, k, copy.deepcopy(v, memo))
+
+        result._lock = threading.Lock()
+
+        return result
+
 
 class RelionParticleDataset(
     AbstractParticleDataset[_ParticleStackInfo, _ParticleStackLike]
@@ -848,8 +866,10 @@ class RelionParticleDataset(
         images_exist = "rlnImageName" in parameter_file.particle_data.columns
         project_exists = self.path_to_relion_project.exists()
         if mode == "w":
+            # Keep track of the file index
+            self._next_file_index = 0
             # Write empty "rlnImageName" column (defaults to NaN values)
-            parameter_file.particle_data["rlnImageName"] = pd.Series(dtype=str)
+            self.particle_data["rlnImageName"] = pd.Series(dtype=str)
             # Make the project directory, if it does not yet exist
             if not project_exists:
                 self.path_to_relion_project.mkdir(parents=True, exist_ok=False)
@@ -866,9 +886,22 @@ class RelionParticleDataset(
                     "`RelionParticleDataset` opened in "
                     "'mode = `r`', but the RELION project directory "
                     "`path_to_relion_project` does not exist. "
-                    "To write images in a STAR file in a new RELION project, "
+                    "To write images in a STAR file for a new RELION project, "
                     "set `mode = 'w'`."
                 )
+            maximum_file_index = _get_maximum_file_index(
+                self.particle_data["rlnImageName"]
+            )
+            if pd.isna(maximum_file_index):
+                raise OSError(
+                    "Tried to retrieve the maximum file index in the "
+                    "STAR file 'rlnImageName' column, but did not correctly "
+                    "parse the filenames. Make sure that filenames end "
+                    "with some kind of numerical indexing, e.g. "
+                    "'img_00000.mrcs'."
+                )
+            self._next_file_index = maximum_file_index + 1
+        self._lock = threading.Lock()
 
     @classmethod
     def empty(
@@ -1120,7 +1153,6 @@ class RelionParticleDataset(
         if images.ndim == 2:
             images = images[None, ...]
         n_images, _ = images.shape[0], images.shape[1]
-        n_particles = len(self.parameter_file)
 
         # Convert index into 1D ascending numpy array
         n_indices = index_array.size
@@ -1132,13 +1164,14 @@ class RelionParticleDataset(
             )
         # Get absolute path to the filename, as well as the 'rlnImageName'
         # column
-        path_to_filename, rln_image_names = _make_image_filename(
-            index_array,
-            parameter_file.particle_data,
-            n_particles,
-            self.mrcfile_options,
-            self.path_to_relion_project,
-        )
+        with self._lock:
+            path_to_filename, rln_image_names = _make_rln_image_name(
+                index_array,
+                self._next_file_index,
+                self.mrcfile_options,
+                self.path_to_relion_project,
+            )
+            self._next_file_index += 1
         # Set the STAR file column
         parameter_file.particle_data.loc[
             parameter_file.particle_data.index[index_array], "rlnImageName"
@@ -1237,6 +1270,24 @@ class RelionParticleDataset(
     @only_images.setter
     def only_images(self, value: bool):
         self._only_images = value
+
+    def __deepcopy__(self, memo):
+        # This is a nasty hack to ensure that this class
+        # works with its `dataset.copy()` routine!
+        # The `threading.Lock()` class does not work under
+        # `deepcopy`, so we need to manually reset it.
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+
+        for k, v in self.__dict__.items():
+            if k == "_lock":
+                continue
+            setattr(result, k, copy.deepcopy(v, memo))
+
+        result._lock = threading.Lock()
+
+        return result
 
 
 def _load_starfile_data(
@@ -2026,32 +2077,12 @@ def _index_to_array(indices: slice | int | np.ndarray, size: int) -> np.ndarray:
         return np.asarray(indices, dtype=int)
 
 
-def _make_image_filename(
+def _make_rln_image_name(
     index: Int[np.ndarray, " _"],
-    particle_data: pd.DataFrame,
-    n_particles: int,
+    file_number: int,
     mrcfile_options: _MrcfileOptions,
     path_to_relion_project: pathlib.Path,
 ) -> tuple[pathlib.Path, list[str]]:
-    # Get the file number for this MRC file
-    if n_particles == 0:
-        file_number = 0
-    else:
-        last_index = index[0] - 1
-        if last_index == -1:
-            file_number = 0
-        else:
-            last_filename = particle_data["rlnImageName"].iloc[last_index].split("@")[1]
-            if pd.isna(last_filename):
-                raise OSError(
-                    "Tried to assign a number to the MRC file while writing "
-                    "images, but could not grab the previous file number at "
-                    f"index {int(last_index)}. At this index, found that the "
-                    "filename was NaN."
-                )
-            else:
-                file_number = _parse_filename_for_number(last_filename) + 1
-    # Unpack settings
     prefix = mrcfile_options["prefix"]
     output_folder = mrcfile_options["output_folder"]
     delimiter = mrcfile_options["delimiter"]
@@ -2074,19 +2105,12 @@ def _make_image_filename(
     return path_to_filename, rln_image_names
 
 
-def _parse_filename_for_number(filename: str) -> int:
-    match = re.search(r"(\d+)\.[^.]+$", filename)
-    try:
-        file_number = int(match.group(1))  # type: ignore
-    except Exception as err:
-        raise OSError(
-            f"Could not get the file number from file {filename} "
-            "Files must be enumerated with the trailing part of the "
-            "filename as the file number, like so: '/path/to/file-0000.txt'. "
-            f"When extracting the file number and converting it to an integer, "
-            f"found error:\n\t{err}"
-        )
-    return file_number
+def _get_maximum_file_index(rln_image_name) -> int:
+    # TODO: this function ~may~ silently fail if DataFrame is
+    # incorrectly formatted!
+    filenames = rln_image_name.str.split("@").str[-1]
+    file_index = filenames.str.extract(r"(\d+)\.[^.]+$", expand=False)
+    return file_index.astype("Int64").max(skipna=True).item()
 
 
 def _format_number_for_filename(file_number: int, n_characters: int = 6):
