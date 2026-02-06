@@ -355,7 +355,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         self._mode = _validate_mode(mode)
         # The STAR file data
         self._path_to_starfile = pathlib.Path(path_to_starfile)
-        self._starfile_data, self._num_optics_groups = _load_starfile_data(
+
+        starfile_data, optics_group_info = _load_starfile_data(
             self._path_to_starfile,
             mode,
             selection_filter,
@@ -363,6 +364,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             num_particles,
             max_optics_groups,
         )
+        self._starfile_data = starfile_data
+        self._num_optics_groups, self._next_optics_group_index = optics_group_info
         self._lock = threading.Lock()
 
     @classmethod
@@ -760,15 +763,11 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                     "increasing the value of `max_optics_groups` via "
                     "`parameter_file.max_optics_groups = ...`."
                 )
-            optics_data = self._starfile_data["optics"]
-            next_optics_array_index = self._num_optics_groups
-            if next_optics_array_index == 0:
-                next_optics_group_index = 1
-            else:
-                last_optics_group_index = optics_data["rlnOpticsGroup"].iloc[
-                    next_optics_array_index - 1
-                ]
-                next_optics_group_index = last_optics_group_index + 1
+            next_optics_group_index, next_optics_array_index = (
+                self._next_optics_group_index,
+                self._num_optics_groups,
+            )
+            self._next_optics_group_index += 1
             self._num_optics_groups += 1
         return next_optics_group_index, next_optics_array_index
 
@@ -1164,14 +1163,13 @@ class RelionParticleDataset(
             )
         # Get absolute path to the filename, as well as the 'rlnImageName'
         # column
-        with self._lock:
-            path_to_filename, rln_image_names = _make_rln_image_name(
-                index_array,
-                self._next_file_index,
-                self.mrcfile_options,
-                self.path_to_relion_project,
-            )
-            self._next_file_index += 1
+        file_index = self._increment_file_index()
+        path_to_filename, rln_image_names = _make_rln_image_name(
+            index_array,
+            file_index,
+            self.mrcfile_options,
+            self.path_to_relion_project,
+        )
         # Set the STAR file column
         parameter_file.particle_data.loc[
             parameter_file.particle_data.index[index_array], "rlnImageName"
@@ -1289,6 +1287,12 @@ class RelionParticleDataset(
 
         return result
 
+    def _increment_file_index(self):
+        with self._lock:
+            file_index = self._next_file_index
+            self._next_file_index += 1
+        return file_index
+
 
 def _load_starfile_data(
     path_to_starfile: pathlib.Path,
@@ -1297,7 +1301,7 @@ def _load_starfile_data(
     exist_ok: bool,
     num_particles: int,
     max_optics_groups: int | None,
-) -> tuple[_StarfileData, int]:
+) -> tuple[_StarfileData, tuple[int, int]]:
     if mode == "r":
         if path_to_starfile.exists():
             starfile_data = read_starfile(path_to_starfile)
@@ -1306,12 +1310,21 @@ def _load_starfile_data(
             if len(selection_filter) > 0:
                 starfile_data = _select_particles(starfile_data, selection_filter)
             # Handle optics group entries
-            num_optics_groups = len(starfile_data["optics"])
+            optics_data = starfile_data["optics"]
+            num_optics_groups, max_optics_group_index = (
+                len(optics_data),
+                optics_data["rlnOpticsGroup"].max().item(),
+            )
+            if pd.isna(max_optics_group_index):
+                raise IOError(
+                    "Tried to parse the optics group 'rlnOpticsGroup' column to "
+                    "retrieve its maximum value, but found that "
+                    "it had a NaN value. Make sure that your STAR file is correctly "
+                    "formatted."
+                )
             if max_optics_groups is None:
                 max_optics_groups = 2 * num_optics_groups
-            starfile_data["optics"] = starfile_data["optics"].reindex(
-                index=range(max_optics_groups)
-            )
+            starfile_data["optics"] = optics_data.reindex(index=range(max_optics_groups))
         else:
             raise FileNotFoundError(
                 f"Set `mode = '{mode}'`, but STAR file {str(path_to_starfile)} does not "
@@ -1328,6 +1341,7 @@ def _load_starfile_data(
         else:
             if len(selection_filter) == 0:
                 num_optics_groups = 0
+                max_optics_group_index = 1
                 if max_optics_groups is None:
                     max_optics_groups = 1
                 starfile_data = dict(
@@ -1355,7 +1369,7 @@ def _load_starfile_data(
         _StarfileData(
             optics=starfile_data["optics"], particles=starfile_data["particles"]
         ),
-        num_optics_groups,
+        (num_optics_groups, max_optics_group_index),
     )
 
 
