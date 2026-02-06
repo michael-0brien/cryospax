@@ -745,9 +745,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
                     "The number of optics groups in the STAR file exceeded "
                     "the number allocated in the "
                     "`parameter_file.starfile_data['optics']` dataframe. Try "
-                    "increasing the value of `max_optics_groups`, e.g."
-                    "`RelionParticleParameterFile.empty(..., max_optics_groups=...)` "
-                    "or `RelionParticleParameterFile.load(..., max_optics_groups=...)`."
+                    "increasing the value of `max_optics_groups` via "
+                    "`parameter_file.max_optics_groups = ...`."
                 )
             optics_data = self._starfile_data["optics"]
             next_optics_array_index = self._num_optics_groups
