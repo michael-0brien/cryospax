@@ -811,11 +811,9 @@ def test_write_particle_batched_particle_parameters():
         }
 
     particle_params = _make_particle_params(jnp.array([0, 0, 0, 0, 0]))
-    new_parameters_file = RelionParticleParameterFile(
+    new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="dummy.star",
-        mode="w",
         exist_ok=True,
-        options=dict(updates_optics_group=True, loads_envelope=True),
     )
 
     new_parameters_file.path_to_starfile = (
@@ -828,10 +826,10 @@ def test_write_particle_batched_particle_parameters():
     with pytest.raises(FileExistsError):
         new_parameters_file.save(overwrite=False)
 
-    parameter_file = RelionParticleParameterFile(
+    parameter_file = RelionParticleParameterFile.load(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
-        mode="r",
-        options=dict(loads_envelope=True, loads_metadata=False),
+        loads_envelope=True,
+        loads_metadata=False,
     )
 
     loaded_params = parameter_file[:]
@@ -862,40 +860,32 @@ def test_write_starfile_different_envs():
         }
 
     particle_params = _make_particle_params(im.FourierGaussian())
-    new_parameters_file = RelionParticleParameterFile(
+    new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
-        mode="w",
         exist_ok=True,
-        options=dict(updates_optics_group=True, loads_envelope=True),
     )
 
     particle_params = _make_particle_params(im.FourierConstant(1.0))
-    new_parameters_file = RelionParticleParameterFile(
+    new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
-        mode="w",
         exist_ok=True,
-        options=dict(updates_optics_group=True, loads_envelope=True),
     )
     new_parameters_file.append(particle_params)
     new_parameters_file.save(overwrite=True)
 
     particle_params = _make_particle_params(None)
-    new_parameters_file = RelionParticleParameterFile(
+    new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
-        mode="w",
         exist_ok=True,
-        options=dict(updates_optics_group=True, loads_envelope=True),
     )
     new_parameters_file.append(particle_params)
     new_parameters_file.save(overwrite=True)
 
     with pytest.raises(ValueError):
         particle_params = _make_particle_params(im.FourierDC(1.0))
-        new_parameters_file = RelionParticleParameterFile(
+        new_parameters_file = RelionParticleParameterFile.empty(
             path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
-            mode="w",
             exist_ok=True,
-            options=dict(updates_optics_group=True, loads_envelope=True),
         )
         new_parameters_file.append(particle_params)
         new_parameters_file.save(overwrite=True)
@@ -915,10 +905,11 @@ def test_raise_errors_parameter_file(sample_starfile_path):
             mode="CRYOEM",  # type: ignore
             options=dict(loads_envelope=False, loads_metadata=False),
         )
-    parameter_file = RelionParticleParameterFile(
+
+    parameter_file = RelionParticleParameterFile.load(
         path_to_starfile=sample_starfile_path,
-        mode="r",
-        options=dict(loads_envelope=False, loads_metadata=False),
+        loads_envelope=False,
+        loads_metadata=False,
     )
 
     assert parameter_file.mode == "r"
@@ -1036,21 +1027,10 @@ def test_append_relion_stack_dataset():
             "transfer_theory": transfer_theory,
         }
 
-    def _mock_compute_image(particle_parameters, constant_args, per_particle_args):
-        # Mock the image computation
-        return per_particle_args
-
-    new_parameters_file = RelionParticleParameterFile(
+    new_stack = RelionParticleDataset.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
-        mode="w",
-        exist_ok=True,
-        options=dict(updates_optics_group=True, loads_envelope=True),
-    )
-
-    new_stack = RelionParticleDataset(
-        new_parameters_file,
         path_to_relion_project="tests/outputs/starfile_writing/",
-        mode="w",
+        exist_ok=True,
         mrcfile_options={"overwrite": False},
     )
 
