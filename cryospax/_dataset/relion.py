@@ -489,9 +489,31 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             The [`cryojax.simulator.ContrastTransferTheory`](https://michael-0brien.github.io/cryojax/api/simulator/transfer_theory/#cryojax.simulator.ContrastTransferTheory)
         - `'metadata'`:
             A `pandas.DataFrame` used to write custom entries to the STAR
-            file. `len(metadata)` should be equal to the number of particles.
+            file. `len(metadata)` should be equal to the number of particles,
+            and `metadata.columns` should be a subset of columns that already
+            exist in `parameter_file.particle_data` but do not include entries
+            filled by the `image_config`, `transfer_theory`, and `pose`.
 
-        All keys are optional.
+        All keys are optional, and unless `image_config` is not given,
+        `parameter_file[...] = value` creates a new optics group.
+
+        !!! warning
+
+            Setting `parameter_file[...] = value` where `value` has a
+            `transfer_theory` but not an `image_config` may result in surprising
+            behavior: a new optics group will not be created, even though
+            'rlnSphericalAberration' and 'rlnAmplitudeContrast' are parameters
+            stored in the `transfer_theory`.
+
+            This is because there is not enough information to create a new
+            optics group if both are not given, and an error is not thrown so that patterns like
+
+            ```python
+            value = {"transfer_theory": cxs.ContrastTransferTheory(...), "pose": cxs.EulerAnglePose}(...)
+            parameter_file[index] = value
+            ```
+
+            can be used to set particle entries.
         """  # noqa: E501
         # Make sure index is valid
         try:
@@ -511,7 +533,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             self._starfile_data["particles"],
             self._starfile_data["optics"],
         )
-        if {"image_config", "transfer_theory"}.issubset(value):
+        if {"image_config"}.issubset(value):
             # Make and set the new optics data
             optics_group_index, optics_array_index = self._increment_optics_group()
             optics_data_for_update = _parameters_to_optics_data(value, optics_group_index)
@@ -524,14 +546,20 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         # Make and set the new particle data
         # ... make
         particle_data_for_update = _parameters_to_particle_data(value, optics_group_index)
-        # ... set new empty columns in the particle data, if the update data includes
-        # this. TODO: this step is not thread safe!
-        new_columns = list(
+        # ... make sure there are no columns that are not recognized
+        unrecognized_columns = list(
             set(particle_data_for_update.columns) - set(particle_data.columns)
         )
-        for column in new_columns:
-            dtype = pd.api.types.pandas_dtype(particle_data_for_update[column].dtype)
-            particle_data[column] = pd.Series(dtype=dtype)
+        if len(unrecognized_columns) > 0:
+            raise ValueError(
+                "When writing parameters via `parameter_file[index] = value`, "
+                "found columns in `value['metadata']` that do not exist in "
+                "`parameter_file.particle_data`. "
+                f"These unrecognized column(s) were: {unrecognized_columns}. "
+                "If you would like to write a custom column 'foo', first instantiate "
+                "this column directly as "
+                "`parameter_file.particle_data['foo'] = pandas.Series(dtype=...)`."
+            )
         # ... set
         if isinstance(index, (int, np.ndarray)):
             index = np.atleast_1d(index)
@@ -558,8 +586,14 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             This key is required.
         - `'metadata'`:
             A `pandas.DataFrame` used to write custom entries to the STAR
-            file. `len(metadata)` should be equal to the number of particles.
+            file. `len(metadata)` should be equal to the number of particles,
+            and `metadata.columns` should be a subset of columns that already
+            exist in `parameter_file.particle_data` but do not include entries
+            filled by the `image_config`, `transfer_theory`, and `pose`.
             This key is optional.
+
+        A new optics group will be created on each call to
+        `parameter_file.append(value)`.
         """
         # Make sure parameters are valid
         _validate_parameters(value, force_keys=True)

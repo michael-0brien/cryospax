@@ -567,9 +567,15 @@ def test_set_particle_parameters(
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
         mode="r",
+        max_optics_groups=5,
         options=dict(loads_envelope=sets_envelope, loads_metadata=False),
     )
     # Set params
+    with pytest.raises(ValueError):
+        parameter_file[index] = new_parameters
+    parameter_file.particle_data["rlnMicrographName"] = pd.Series(dtype=str)
+    parameter_file.particle_data["rlnCoordinateX"] = pd.Series(dtype="Int64")
+    parameter_file.particle_data["rlnCoordinateY"] = pd.Series(dtype="Int64")
     parameter_file[index] = new_parameters
     # Make sure custom metadata was added
     particle_dataframe = parameter_file.particle_data
