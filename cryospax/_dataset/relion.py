@@ -372,10 +372,10 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
     def empty(
         cls: type[Self],
         path_to_starfile: str | pathlib.Path,
+        num_particles: int,
         *,
         max_optics_groups: int = 1,
         exist_ok: bool = False,
-        num_particles: int = 0,
     ) -> Self:
         """Convenience wrapper for
         [`cryospax.RelionParticleParameterFile.__init__`][] in
@@ -941,10 +941,10 @@ class RelionParticleDataset(
         cls: type[Self],
         path_to_starfile: str | pathlib.Path,
         path_to_relion_project: str | pathlib.Path,
+        num_particles: int,
         *,
         max_optics_groups: int = 1,
         exist_ok: bool = False,
-        num_particles: int = 0,
         mrcfile_options: dict[str, Any] = {},
     ) -> Self:
         """Convenience wrapper for intializing a new

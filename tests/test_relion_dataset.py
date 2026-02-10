@@ -797,7 +797,7 @@ def test_write_particle_batched_particle_parameters():
 
     particle_params = _make_particle_params(jnp.array([0, 0, 0, 0, 0]))
     new_parameters_file = RelionParticleParameterFile.empty(
-        path_to_starfile="dummy.star", exist_ok=True, max_optics_groups=1
+        path_to_starfile="dummy.star", exist_ok=True, num_particles=0, max_optics_groups=1
     )
 
     new_parameters_file.path_to_starfile = (
@@ -847,6 +847,7 @@ def test_write_starfile_different_envs():
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         exist_ok=True,
+        num_particles=0,
         max_optics_groups=1,
     )
     new_parameters_file.append(particle_params)
@@ -856,6 +857,7 @@ def test_write_starfile_different_envs():
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         exist_ok=True,
+        num_particles=0,
         max_optics_groups=1,
     )
     new_parameters_file.append(particle_params)
@@ -865,6 +867,7 @@ def test_write_starfile_different_envs():
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         exist_ok=True,
+        num_particles=0,
         max_optics_groups=1,
     )
     new_parameters_file.append(particle_params)
@@ -875,6 +878,7 @@ def test_write_starfile_different_envs():
         new_parameters_file = RelionParticleParameterFile.empty(
             path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
             exist_ok=True,
+            num_particles=0,
             max_optics_groups=1,
         )
         new_parameters_file.append(particle_params)
@@ -1008,6 +1012,7 @@ def test_append_relion_stack_dataset():
         path_to_relion_project="tests/outputs/starfile_writing/",
         max_optics_groups=1,
         exist_ok=True,
+        num_particles=0,
         mrcfile_options={"overwrite": False},
     )
 
