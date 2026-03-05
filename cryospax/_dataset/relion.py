@@ -515,6 +515,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
 
             can be used to set particle entries.
         """  # noqa: E501
+        value = filter_device_get(value)
         # Make sure index is valid
         try:
             _validate_dataset_index(type(self), index, self.num_particles)
@@ -595,6 +596,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         A new optics group will be created on each call to
         `parameter_file.append(value)`.
         """
+        value = filter_device_get(value)
         # Make sure parameters are valid
         _validate_parameters(value, force_keys=True)
         # Make new optics group
@@ -1094,6 +1096,7 @@ class RelionParticleDataset(
             See [`cryospax.RelionParticleParameterFile`][] for more
             information. This key is optional.
         """
+        value = filter_device_get(value)
         if isinstance(index, Int[np.ndarray, "_"]):  # type: ignore
             raise ValueError(
                 "When setting `dataset[index] = ...`, "
@@ -1126,6 +1129,7 @@ class RelionParticleDataset(
 
         Both keys are required.
         """
+        value = filter_device_get(value)
         if not isinstance(value, dict):
             raise TypeError(
                 "When appending `dataset.append(foo)`, "
@@ -1579,16 +1583,25 @@ def _make_pytrees_from_starfile(
         if len(batch_shape) > 0 and param.shape == ()
         else param
     )
-    pose_params = tuple(
+    offset_params = tuple(
         maybe_make_full(x)
         for x in (
             -np.asarray(rln_origin_x_angst, dtype=float_dtype),
             -np.asarray(rln_origin_y_angst, dtype=float_dtype),
-            -np.asarray(rln_angle_rot, dtype=float_dtype),
-            -np.asarray(rln_angle_tilt, dtype=float_dtype),
-            -np.asarray(rln_angle_psi, dtype=float_dtype),
         )
     )
+    rotation_params = _convert_euler_angles(
+        *tuple(
+            maybe_make_full(x)
+            for x in (
+                np.asarray(rln_angle_rot, dtype=float_dtype),
+                np.asarray(rln_angle_tilt, dtype=float_dtype),
+                np.asarray(rln_angle_psi, dtype=float_dtype),
+            )
+        )
+    )
+    pose_params = (*offset_params, *rotation_params)
+    assert len(pose_params) == 5
     # Now, create cryojax objects. Do this on the CPU
     cpu_device = jax.devices(backend="cpu")[0]
     with jax.default_device(cpu_device):
@@ -1927,9 +1940,12 @@ def _parameters_to_particle_data(
             raise RuntimeError(
                 "Internal `cryojax` error when loading translations to STAR file."
             )
-        particles_dict["rlnAngleRot"] = -pose.phi_angle
-        particles_dict["rlnAngleTilt"] = -pose.theta_angle
-        particles_dict["rlnAnglePsi"] = -pose.psi_angle
+        rln_angle_rot, rln_angle_tilt, rln_angle_psi = _convert_euler_angles(
+            pose.phi_angle, pose.theta_angle, pose.psi_angle
+        )
+        particles_dict["rlnAngleRot"] = rln_angle_rot
+        particles_dict["rlnAngleTilt"] = rln_angle_tilt
+        particles_dict["rlnAnglePsi"] = rln_angle_psi
         # Now, broadcast parameters to same dimension
         n_particles = pose.offset_x_in_angstroms.size
         for k, v in particles_dict.items():
@@ -2167,3 +2183,18 @@ def _format_number_for_filename(file_number: int, n_characters: int = 6):
     else:
         n_digits = int(np.log10(file_number)) + 1
         return "0" * (n_characters - n_digits) + str(file_number)
+
+
+def _convert_euler_angles(
+    phi_angle: NDArrayLike, theta_angle: NDArrayLike, psi_angle: NDArrayLike
+):
+    assert phi_angle.size == theta_angle.size == psi_angle.size
+    assert phi_angle.ndim == theta_angle.ndim == psi_angle.ndim
+    wrap_angle = lambda a: ((a + 180) % 360) - 180
+    phi_angle, theta_angle, psi_angle = -phi_angle, (-theta_angle) % 360, psi_angle
+    correct_mask = theta_angle > 180
+    phi_angle = np.where(correct_mask, phi_angle + 180, phi_angle)
+    theta_angle = np.where(correct_mask, 360 - theta_angle, theta_angle)
+    psi_angle = np.where(correct_mask, psi_angle + 180, psi_angle)
+
+    return wrap_angle(phi_angle), theta_angle, wrap_angle(psi_angle)
