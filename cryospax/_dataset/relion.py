@@ -2191,7 +2191,7 @@ def _convert_euler_angles(
     assert phi_angle.size == theta_angle.size == psi_angle.size
     assert phi_angle.ndim == theta_angle.ndim == psi_angle.ndim
     wrap_angle = lambda a: ((a + 180) % 360) - 180
-    phi_angle, theta_angle, psi_angle = -phi_angle, (-theta_angle) % 360, psi_angle
+    phi_angle, theta_angle, psi_angle = -phi_angle, (-theta_angle) % 360, -psi_angle
     correct_mask = theta_angle > 180
     phi_angle = np.where(correct_mask, phi_angle + 180, phi_angle)
     theta_angle = np.where(correct_mask, 360 - theta_angle, theta_angle)
