@@ -23,7 +23,7 @@ dynamic = ["version"]
 dependencies = [
     "cryojax>0.5.2",
     "starfile",
-    "pandas>3.0.0",
+    "pandas>=3.0.0",
 ]
 
 [project.optional-dependencies]

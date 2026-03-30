@@ -2156,9 +2156,12 @@ def _make_rln_image_name(
 def _get_maximum_file_index(rln_image_name) -> int:
     # TODO: this function ~may~ silently fail if DataFrame is
     # incorrectly formatted!
-    filenames = rln_image_name.str.split("@").str[-1]
+    filenames = (
+        rln_image_name.str.split("@").str[-1].apply(lambda x: pathlib.Path(x).name)
+    )
+
     file_index = filenames.str.extract(r"(\d+)(?:_[^_.]+)?\.[^.]+$", expand=False)
-    return file_index.astype("Int64").max(skipna=True).item()
+    return int(file_index.astype("Int64").max(skipna=True))
 
 
 def _format_number_for_filename(file_number: int, n_characters: int = 6):
