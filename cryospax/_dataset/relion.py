@@ -642,8 +642,8 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             if not path_to_starfile.parent.exists():
                 path_to_starfile.parent.mkdir(parents=True)
             starfile_data = _StarfileData(
-                particles=self.particle_data,
                 optics=self.optics_data.iloc[: self.num_optics_groups],
+                particles=self.particle_data,
             )
             write_starfile(starfile_data, path_to_starfile, **kwargs)
 
@@ -1347,7 +1347,7 @@ def _load_starfile_data(
             optics_data = starfile_data["optics"]
             num_optics_groups, max_optics_group_index = (
                 len(optics_data),
-                optics_data["rlnOpticsGroup"].max().item(),
+                int(optics_data["rlnOpticsGroup"].max()),
             )
             if pd.isna(max_optics_group_index):
                 raise OSError(
@@ -2157,7 +2157,7 @@ def _get_maximum_file_index(rln_image_name) -> int:
     # TODO: this function ~may~ silently fail if DataFrame is
     # incorrectly formatted!
     filenames = rln_image_name.str.split("@").str[-1]
-    file_index = filenames.str.extract(r"(\d+)\.[^.]+$", expand=False)
+    file_index = filenames.str.extract(r"(\d+)(?:_[^_.]+)?\.[^.]+$", expand=False)
     return file_index.astype("Int64").max(skipna=True).item()
 
 
