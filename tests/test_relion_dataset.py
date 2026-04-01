@@ -74,7 +74,7 @@ def relion_parameters():
 
 class TestErrorRaisingForLoading:
     def test_load_with_badparticle_name(self, parameter_file, sample_relion_project_path):
-        parameter_file.starfile_data["particles"].loc[0, "rlnImageName"] = "0.0"
+        parameter_file.particle_data.loc[0, "rlnImageName"] = "0.0"
         dataset = RelionParticleDataset(
             path_to_relion_project=sample_relion_project_path,
             parameter_file=parameter_file,
@@ -82,19 +82,20 @@ class TestErrorRaisingForLoading:
         with pytest.raises(ValueError):
             dataset[0]
 
-        def test_load_with_badparticle_name2(
-            self, parameter_file, sample_relion_project_path
-        ):
-            parameter_file.starfile_data["particles"].loc[0, "rlnImageName"] = "0000.mrcs"
-            dataset = RelionParticleDataset(
-                path_to_relion_project=sample_relion_project_path,
-                parameter_file=parameter_file,
-            )
-            with pytest.raises(TypeError):
-                dataset[0]
+    def test_load_with_badparticle_name2(
+        self, parameter_file, sample_relion_project_path
+    ):
+        parameter_file.particle_data.loc[0, "rlnImageName"] = "0000.mrcs"
+        dataset = RelionParticleDataset(
+            path_to_relion_project=sample_relion_project_path,
+            parameter_file=parameter_file,
+        )
+        with pytest.raises(ValueError):
+            dataset[0]
 
     def test_load_with_bad_shape(self, parameter_file, sample_relion_project_path):
-        parameter_file.starfile_data["optics"].loc[0, "rlnImageSize"] = 1
+        optics_data = parameter_file.optics_data
+        optics_data.loc[0, "rlnImageSize"] = 1
         dataset = RelionParticleDataset(
             path_to_relion_project=sample_relion_project_path,
             parameter_file=parameter_file,
@@ -196,7 +197,7 @@ def test_load_starfile_envelope_params(sample_starfile_path):
 
     envelope = parameters["transfer_theory"].envelope
 
-    particle_data = parameter_file.starfile_data["particles"]
+    particle_data = parameter_file.particle_data
     # check that envelope params match
     for i in range(len(parameter_file)):
         # check b-factors
@@ -248,7 +249,7 @@ def test_load_starfile_ctf_params(sample_starfile_path):
     transfer_theory = parameters["transfer_theory"]
     ctf = cast(cxs.AstigmaticCTF, transfer_theory.ctf)
 
-    particle_data = parameter_file.starfile_data["particles"]
+    particle_data = parameter_file.particle_data
     # check CTF parameters
     for i in range(len(parameter_file)):
         # defocus
@@ -297,7 +298,7 @@ def test_load_starfile_pose_params(sample_starfile_path):
     parameters = parameter_file[:]
     pose = parameters["pose"]
 
-    particle_data = parameter_file.starfile_data["particles"]
+    particle_data = parameter_file.particle_data
     # Check pose parameters
     for i in range(len(parameter_file)):
         # offset x
@@ -369,7 +370,6 @@ def test_parameter_file_setters(sample_starfile_path):
         options=dict(
             loads_envelope=False,
             loads_metadata=False,
-            updates_optics_group=False,
         ),
     )
 
@@ -378,9 +378,6 @@ def test_parameter_file_setters(sample_starfile_path):
 
     parameter_file.loads_envelope = True
     assert parameter_file.loads_envelope
-
-    parameter_file.updates_optics_group = True
-    assert parameter_file.updates_optics_group
 
 
 def test_load_starfile_vs_mrcs_shape(sample_starfile_path, sample_relion_project_path):
@@ -503,7 +500,7 @@ def test_append_particle_parameters(index, loads_envelope):
     )
     parameter_file.append(particle_params)
     # Make sure custom metadata was added
-    particle_dataframe = parameter_file.starfile_data["particles"]
+    particle_dataframe = parameter_file.particle_data
     assert set(metadata.columns).issubset(particle_dataframe.columns)
     # Make sure dataframes are the same
     metadata_extracted = particle_dataframe.loc[
@@ -518,18 +515,17 @@ def test_append_particle_parameters(index, loads_envelope):
 
 
 @pytest.mark.parametrize(
-    "index, updates_optics_group, sets_envelope",
+    "index, sets_envelope",
     [
-        (0, False, False),
-        ([0, 1], False, False),
-        (0, True, False),
-        (0, False, True),
+        (0, False),
+        ([0, 1], False),
+        (0, False),
+        (0, True),
     ],
 )
 def test_set_particle_parameters(
     sample_starfile_path,
     index,
-    updates_optics_group,
     sets_envelope,
 ):
     index = np.asarray(index)
@@ -571,16 +567,18 @@ def test_set_particle_parameters(
     parameter_file = RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path,
         mode="r",
-        options=dict(
-            loads_envelope=sets_envelope,
-            loads_metadata=False,
-            updates_optics_group=updates_optics_group,
-        ),
+        max_optics_groups=5,
+        options=dict(loads_envelope=sets_envelope, loads_metadata=False),
     )
     # Set params
+    with pytest.raises(ValueError):
+        parameter_file[index] = new_parameters
+    parameter_file.particle_data["rlnMicrographName"] = pd.Series(dtype=str)
+    parameter_file.particle_data["rlnCoordinateX"] = pd.Series(dtype="Int64")
+    parameter_file.particle_data["rlnCoordinateY"] = pd.Series(dtype="Int64")
     parameter_file[index] = new_parameters
     # Make sure custom metadata was added
-    particle_dataframe = parameter_file.starfile_data["particles"]
+    particle_dataframe = parameter_file.particle_data
     assert set(metadata.columns).issubset(particle_dataframe.columns)
     # Make sure dataframes are the same
     metadata_extracted = particle_dataframe.loc[
@@ -591,21 +589,7 @@ def test_set_particle_parameters(
     # Load params that were just set
     loaded_parameters = parameter_file[index]
     del new_parameters["metadata"]
-    if updates_optics_group:
-        assert compare_dicts(new_parameters, loaded_parameters)
-    else:
-        assert compare_dicts(
-            dict(pose=new_parameters["pose"]), dict(pose=loaded_parameters["pose"])
-        )
-        np.testing.assert_allclose(
-            new_parameters["transfer_theory"].ctf.defocus_in_angstroms,  # type: ignore
-            loaded_parameters["transfer_theory"].ctf.defocus_in_angstroms,  # type: ignore
-        )
-        if sets_envelope:
-            np.testing.assert_allclose(
-                new_parameters["transfer_theory"].envelope.b_factor,  # type: ignore
-                loaded_parameters["transfer_theory"].envelope.b_factor,  # type: ignore
-            )
+    assert compare_dicts(new_parameters, loaded_parameters)
 
 
 def test_file_exists_error():
@@ -740,6 +724,7 @@ def test_write_image(
         path_to_starfile=sample_starfile_path,
         mode="r",
         exist_ok=True,
+        max_optics_groups=10,
     )
     parameter_file.path_to_starfile = (
         "tests/outputs/starfile_writing/test_particle_parameters.star"
@@ -750,8 +735,8 @@ def test_write_image(
         path_to_relion_project=sample_relion_project_path,
         mode="w",
     )
-    starfile_data = dataset.parameter_file.starfile_data
-    assert starfile_data["particles"]["rlnImageName"].isna().all()
+    particle_data = dataset.parameter_file.particle_data
+    assert particle_data["rlnImageName"].isna().all()
 
     shape = relion_parameters["image_config"].shape
     particle = dict(
@@ -778,11 +763,11 @@ def test_write_image(
     dataset.mrcfile_options = dict(prefix="f", overwrite=True)
     dataset[0] = particle
 
-    starfile_data = dataset.parameter_file.starfile_data
-    rln_image_name = starfile_data["particles"]["rlnImageName"][0]
+    particle_data = dataset.parameter_file.particle_data
+    rln_image_name = particle_data["rlnImageName"][0]
     # Assert entry was written
     assert not pd.isna(rln_image_name)
-    assert starfile_data["particles"]["rlnImageName"][1:].isna().all()
+    assert particle_data["rlnImageName"][1:].isna().all()
     # Assert file was written and delete it
     filename = str(rln_image_name).split("@")[1]
     path_to_filename = os.path.join(sample_relion_project_path, filename)
@@ -812,8 +797,7 @@ def test_write_particle_batched_particle_parameters():
 
     particle_params = _make_particle_params(jnp.array([0, 0, 0, 0, 0]))
     new_parameters_file = RelionParticleParameterFile.empty(
-        path_to_starfile="dummy.star",
-        exist_ok=True,
+        path_to_starfile="dummy.star", exist_ok=True, num_particles=0, max_optics_groups=1
     )
 
     new_parameters_file.path_to_starfile = (
@@ -863,12 +847,18 @@ def test_write_starfile_different_envs():
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         exist_ok=True,
+        num_particles=0,
+        max_optics_groups=1,
     )
+    new_parameters_file.append(particle_params)
+    new_parameters_file.save(overwrite=True)
 
     particle_params = _make_particle_params(im.FourierConstant(1.0))
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         exist_ok=True,
+        num_particles=0,
+        max_optics_groups=1,
     )
     new_parameters_file.append(particle_params)
     new_parameters_file.save(overwrite=True)
@@ -877,6 +867,8 @@ def test_write_starfile_different_envs():
     new_parameters_file = RelionParticleParameterFile.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         exist_ok=True,
+        num_particles=0,
+        max_optics_groups=1,
     )
     new_parameters_file.append(particle_params)
     new_parameters_file.save(overwrite=True)
@@ -886,6 +878,8 @@ def test_write_starfile_different_envs():
         new_parameters_file = RelionParticleParameterFile.empty(
             path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
             exist_ok=True,
+            num_particles=0,
+            max_optics_groups=1,
         )
         new_parameters_file.append(particle_params)
         new_parameters_file.save(overwrite=True)
@@ -914,16 +908,6 @@ def test_raise_errors_parameter_file(sample_starfile_path):
 
     assert parameter_file.mode == "r"
 
-    # bad keys, bad values
-    with pytest.raises((ValueError, TypeCheckError)):
-        starfile_data = {"cryo": pd.DataFrame({}), "em": pd.DataFrame({})}
-        parameter_file.starfile_data = starfile_data
-
-    # good keys, bad values
-    with pytest.raises((ValueError, TypeCheckError)):
-        starfile_data = {"particles": 0, "optics": 0}
-        parameter_file.starfile_data = starfile_data  # type: ignore
-
     # now set to write mode and try to filter
     with pytest.raises(ValueError):
         parameter_file = RelionParticleParameterFile(
@@ -945,15 +929,11 @@ def test_raise_errors_stack_dataset(sample_starfile_path, sample_relion_project_
         "tests/outputs/starfile_writing/test_particle_parameters.star"
     )
 
-    starfile_data = parameter_file.starfile_data
-    particle_data = starfile_data["particles"]
     # remove "rlnImageName" column
-    particle_data = particle_data.drop(columns=["rlnImageName"])
-
-    parameter_file.starfile_data = {
-        "particles": particle_data,
-        "optics": starfile_data["optics"],
-    }
+    particle_data = parameter_file.particle_data
+    parameter_file._starfile_data["particles"] = particle_data.drop(
+        columns=["rlnImageName"]
+    )
 
     with pytest.raises(IOError):
         particle_dataset = RelionParticleDataset(
@@ -1030,7 +1010,9 @@ def test_append_relion_stack_dataset():
     new_stack = RelionParticleDataset.empty(
         path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
         path_to_relion_project="tests/outputs/starfile_writing/",
+        max_optics_groups=1,
         exist_ok=True,
+        num_particles=0,
         mrcfile_options={"overwrite": False},
     )
 
