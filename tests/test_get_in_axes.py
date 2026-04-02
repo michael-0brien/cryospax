@@ -4,17 +4,32 @@ import pytest
 
 
 @pytest.fixture
-def registered_datasets(sample_starfile_path, sample_relion_project_path):
-    parameter_file = spx.RelionParticleParameterFile(sample_starfile_path)
+def registered_datasets(
+    sample_starfile_path, sample_csfile_path, sample_relion_project_path
+):
+    rl_parameter_file = spx.RelionParticleParameterFile(sample_starfile_path)
+    cs_parameter_file = spx.CryoSparcParticleParameterFile(sample_csfile_path)
+
     return [
-        parameter_file,
+        rl_parameter_file,
         spx.RelionParticleDataset(
-            parameter_file.copy(),
+            rl_parameter_file.copy(),
             sample_relion_project_path,
             only_images=False,
         ),
         spx.RelionParticleDataset(
-            parameter_file.copy(),
+            rl_parameter_file.copy(),
+            sample_relion_project_path,
+            only_images=True,
+        ),
+        cs_parameter_file,
+        spx.CryoSparcParticleDataset(
+            cs_parameter_file.copy(),
+            sample_relion_project_path,
+            only_images=False,
+        ),
+        spx.CryoSparcParticleDataset(
+            cs_parameter_file.copy(),
             sample_relion_project_path,
             only_images=True,
         ),
@@ -22,14 +37,24 @@ def registered_datasets(sample_starfile_path, sample_relion_project_path):
 
 
 @pytest.fixture
-def erroneous_datasets(sample_starfile_path, sample_relion_project_path):
-    parameter_file = spx.RelionParticleParameterFile(
+def erroneous_datasets(
+    sample_starfile_path, sample_csfile_path, sample_relion_project_path
+):
+    rl_parameter_file = spx.RelionParticleParameterFile(
         path_to_starfile=sample_starfile_path, options=dict(loads_metadata=True)
     )
+    cs_parameter_file = spx.CryoSparcParticleParameterFile(
+        path_to_csfile=sample_csfile_path, options=dict(loads_metadata=True)
+    )
     return [
-        parameter_file,
+        rl_parameter_file,
         spx.RelionParticleDataset(
-            parameter_file.copy(),
+            rl_parameter_file.copy(),
+            sample_relion_project_path,
+        ),
+        cs_parameter_file,
+        spx.CryoSparcParticleDataset(
+            cs_parameter_file.copy(),
             sample_relion_project_path,
         ),
     ]

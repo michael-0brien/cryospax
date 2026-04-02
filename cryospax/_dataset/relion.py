@@ -1335,7 +1335,9 @@ def _load_starfile_data(
             _validate_starfile_data(starfile_data)
             # Handle particle entries
             if len(selection_filter) > 0:
-                starfile_data = _select_particles(starfile_data, selection_filter)
+                starfile_data["particles"] = _select_particles(
+                    starfile_data["particles"], selection_filter
+                )
             # Handle optics group entries
             optics_data = starfile_data["optics"]
             num_optics_groups, max_optics_group_index = (

@@ -71,7 +71,7 @@ class TestErrorRaisingForLoading:
     def test_load_with_badparticle_name(self, parameter_file, sample_relion_project_path):
         parameter_file.csfile_data.loc[0, "blob/path"] = "0.0"
         dataset = CryoSparcParticleDataset(
-            path_to_relion_project=sample_relion_project_path,
+            path_to_csparc_project=sample_relion_project_path,
             parameter_file=parameter_file,
         )
         with pytest.raises(FileNotFoundError):
@@ -82,7 +82,7 @@ class TestErrorRaisingForLoading:
         ):
             parameter_file.csfile_data.loc[0, "blob/path"] = "0000.mrcs"
             dataset = CryoSparcParticleDataset(
-                path_to_relion_project=sample_relion_project_path,
+                path_to_csparc_project=sample_relion_project_path,
                 parameter_file=parameter_file,
             )
             with pytest.raises(TypeError):
@@ -91,7 +91,7 @@ class TestErrorRaisingForLoading:
     def test_load_with_bad_shape(self, parameter_file, sample_relion_project_path):
         parameter_file.csfile_data.at[0, "blob/shape"] = [1, 1]
         dataset = CryoSparcParticleDataset(
-            path_to_relion_project=sample_relion_project_path,
+            path_to_csparc_project=sample_relion_project_path,
             parameter_file=parameter_file,
         )
         with pytest.raises(ValueError):
@@ -99,7 +99,7 @@ class TestErrorRaisingForLoading:
 
     def test_with_bad_indices(self, parameter_file, sample_relion_project_path):
         dataset = CryoSparcParticleDataset(
-            path_to_relion_project=sample_relion_project_path,
+            path_to_csparc_project=sample_relion_project_path,
             parameter_file=parameter_file,
         )
 
@@ -397,7 +397,7 @@ def test_matches_with_relion(
 
     dataset_cs = CryoSparcParticleDataset(
         parameter_file=parameter_file_cs,
-        path_to_relion_project=sample_relion_project_path,
+        path_to_csparc_project=sample_relion_project_path,
     )
 
     dataset_rl = RelionParticleDataset(
