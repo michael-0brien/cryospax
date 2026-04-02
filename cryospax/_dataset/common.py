@@ -7,11 +7,12 @@ import equinox as eqx
 import equinox.internal as eqxi
 import numpy as np
 import pandas as pd
-from cryojax.jax_util import FloatLike
 from cryojax.ndimage import FourierConstant, FourierGaussian
 from cryojax.simulator import AstigmaticCTF, BasicImageConfig, ContrastTransferTheory
+from jaxtyping import Float
 
 
+FloatLike = eqxi.doc_repr(float | Float[np.ndarray, ""], "FloatLike")
 MakeImageConfig = Callable[[tuple[int, int], FloatLike, FloatLike], BasicImageConfig]
 
 
@@ -45,6 +46,7 @@ def _default_make_image_config(shape, pixel_size, voltage_in_kilovolts):
     )
 
 
+FloatLike = eqxi.doc_repr(float | Float[np.ndarray, ""], "FloatLike")
 default_make_image_config = eqxi.doc_repr(_default_make_image_config, "default_fn")
 
 

@@ -11,7 +11,6 @@ from typing import Any, Literal, TypedDict
 from typing_extensions import NotRequired, Self, override
 
 import equinox as eqx
-import equinox.internal as eqxi
 import jax
 import jax.numpy as jnp
 import mrcfile
@@ -89,9 +88,6 @@ RELION_SUPPORTED_PARTICLE_ENTRIES = [
     ("rlnCtfBfactor", "Float64"),
     ("rlnCtfScalefactor", "Float64"),
 ]
-
-
-FloatLike = eqxi.doc_repr(float | Float[np.ndarray, ""], "FloatLike")
 
 
 if hasattr(typing, "GENERATING_DOCUMENTATION"):
