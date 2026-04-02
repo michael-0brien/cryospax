@@ -1,10 +1,12 @@
 """cryoJAX compatibility with [CSPARC](https://relion.readthedocs.io/en/release-5.0/)."""
 
 import abc
+import copy
 import pathlib
+import threading
 import typing
 from collections.abc import Callable
-from typing import Any, Literal, TypedDict, cast
+from typing import Any, Literal, Self, TypedDict, cast
 from typing_extensions import NotRequired, override
 
 import equinox as eqx
@@ -33,7 +35,7 @@ from .common import (
     _make_transfer_theory,
     _select_particles,
     _validate_dataset_index,
-    _validate_mode,
+    default_make_image_config,
 )
 
 
@@ -100,6 +102,14 @@ else:
     _ParticleParameterLike = dict[str, Any] | _ParticleParameterInfo
     _ParticleStackLike = dict[str, Any] | _ParticleStackInfo
 
+    class _Options(TypedDict):
+        loads_metadata: bool
+        loads_envelope: bool
+        make_image_config: MakeImageConfig
+
+    _ParticleParameterLike = dict[str, Any] | _ParticleParameterInfo
+    _ParticleStackLike = dict[str, Any] | _ParticleStackInfo
+
 
 class AbstractParticleCryoSparcFile(
     AbstractParticleParameterFile[_ParticleParameterInfo, _ParticleParameterLike]
@@ -129,11 +139,6 @@ class AbstractParticleCryoSparcFile(
     def csfile_data(self) -> pd.DataFrame:
         raise NotImplementedError
 
-    @csfile_data.setter
-    @abc.abstractmethod
-    def csfile_data(self, value: dict[str, pd.DataFrame]):
-        raise NotImplementedError
-
     @property
     @abc.abstractmethod
     def loads_metadata(self) -> bool:
@@ -156,16 +161,6 @@ class AbstractParticleCryoSparcFile(
 
     @property
     @abc.abstractmethod
-    def updates_optics_group(self) -> bool:
-        raise NotImplementedError
-
-    @updates_optics_group.setter
-    @abc.abstractmethod
-    def updates_optics_group(self, value: bool):
-        raise NotImplementedError
-
-    @property
-    @abc.abstractmethod
     def make_image_config(self) -> MakeImageConfig:
         raise NotImplementedError
 
@@ -174,103 +169,118 @@ class AbstractParticleCryoSparcFile(
     def make_image_config(self, value: MakeImageConfig):
         raise NotImplementedError
 
+    def get_metadata(
+        self, index: int | slice | Int[np.ndarray, ""] | Int[np.ndarray, " _"]
+    ) -> pd.DataFrame:
+        """Extract the columns at a given `index` *not* included in the cryoJAX
+        classes loaded into `parameter_info = parameter_file[index]`.
+
+        This method is for advanced usage; prefer setting
+        `parameter_file.loads_metadata = True` and accessing this as
+        `parameter_info = parameter_file[...]; metadata = parameter_info["metadata"]`.
+        """
+        _validate_dataset_index(type(self), index, len(self))
+        csfile_data_at_index = self.csfile_data.iloc[index]
+        # ... convert to dataframe for serialization
+        if isinstance(csfile_data_at_index, pd.Series):
+            csfile_data_at_index = csfile_data_at_index.to_frame().T
+        # ... no overlapping keys with loaded pytrees
+        redundant_entry_labels, _ = list(zip(*CSPARC_SUPPORTED_PARTICLE_ENTRIES))
+        columns = csfile_data_at_index.columns
+        remove_columns = [
+            column for column in columns if column in redundant_entry_labels
+        ]
+        metadata = csfile_data_at_index.drop(remove_columns, axis="columns")
+        return metadata
+
 
 class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
     """A dataset that wraps a CSPARC particle stack in
     [CryoSPARC  ](https://guide.cryosparc.com/setup-configuration-and-management/software-system-guides/manipulating-.cs-files-created-by-cryosparc)
     format.
 
+    Only available in reading mode.
 
-    **Example:**
-    ```python
-    from cryojax.dataset import CryoSparcParticleParameterFile
-    from cryojax.io import read_csparc_data
-
-    # For knowing how to set a filter it is useful to see how we
-    # we read the cryosparc metadata
-
-    csfile = read_csparc_data(
-        "path/to/cryosparc/particles.cs"
-    )
-    print(csfile.head())
-
-    # For example, to select only particles from class 0 from a 3D classification job:
-
-    csparc_parameter_file = CryoSparcParticleParameterFile(
-        path_to_csfile="path/to/cryosparc/particles.cs",
-        selection_filter={
-            "alignments3D/class": lambda x: x == 0
-        },
-    )
-
-
-    ```
-    """
+    """  # noqa: E501
 
     def __init__(
         self,
         path_to_csfile: str | pathlib.Path,
-        mode: Literal["r", "w"] = "r",
         *,
-        exists_ok: bool = False,
         selection_filter: dict[str, Callable] | None = None,
         options: dict[str, Any] = {},
     ):
         """**Arguments:**
 
-         - `path_to_csfile`:
+        - `path_to_csfile`:
              The path to the CryoSPARC parameters file (`.cs`). If the path does not exist
              and `mode = 'w'`, an empty dataset will be created.
-         - `mode`:
-             - If `mode = 'r'`, the CryoSPARC parameters file at `path_to_csfile` is read
-             into `CryoSparcParticleParameterFile.csfile_data`.
-             - mode = 'w'` is not currently supported.
-         - `exist_ok`:
-             Currently not used for this type of dataset,
-             as it is only relevant in writing mode.
         - `selection_filter`:
-             A dictionary used to include only particular dataset elements.
-             The keys of this dictionary should be any data entry in the CryoSPARC
-             parameters file, while the values should be a function that takes in a
-             column and returns a boolean mask for the column. For example,
-             filter by class using
-             `selection_filter["alignments3D/class"] = lambda x: x == 0`.
-         - `options`:
-             A dictionary of options for modifying the behavior of loading/writing.
-             - 'loads_metadata':
-                 If `True`, the resulting dict loads
-                 the raw metadata from the CryoSPARC parameters file that is not otherwise
-                 included into a `pandas.DataFrame`.
-                 If this is set to `True`, note that dictionaries cannot pass through
-                 JIT boundaries without removing the metadata.
-                 By default, `False`.
-             - 'loads_envelope':
-                 If `True`, read in the parameters of the CTF envelope function, i.e.
-                 "ctf/scale" and "ctf/bfactor".
-                 By default, `False`.
-             - 'updates_optics_group':
-                 Currently not used for this type of dataset,
-                 as it is only relevant in writing mode.
-             - 'make_image_config':
-                 A function with signature
-                 `fn(shape, pixel_size, voltage_in_kilovolts)` that
-                 returns a [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/)
-                 class. Use this argument when it is desired to customize the `image_config`
-                 returned from this class, i.e.
-                 `value = parameter_file[0:7]; print(value["image_config"])`.
+            A dictionary used to include only particular dataset elements.
+            The keys of this dictionary should be any data entry in the STAR
+            file, while the values should be a function that takes in a
+            column and returns a boolean mask for the column. For example,
+            filter by class using
+            `selection_filter["rlnClassNumber"] = lambda x: x == 0`.
+        - `options`:
+            A dictionary of options for modifying the behavior of reading/writing.
+            - `'loads_metadata'`:
+                If `True`, the resulting dict loads
+                the raw metadata from the STAR file that is not otherwise included
+                into a `pandas.DataFrame`.
+                If this is set to `True`, note that dictionaries cannot pass through
+                JIT boundaries without removing the metadata.
+                By default, `False`.
+            - `'loads_envelope'`:
+                If `True`, read in the parameters of the CTF envelope function, i.e.
+                "rlnCtfScalefactor" and "rlnCtfBfactor".
+                By default, `False`.
+            - `'make_image_config'`:
+                A function with signature
+                `fn(shape, pixel_size, voltage_in_kilovolts)` that
+                returns a [`cryojax.simulator.BasicImageConfig`](https://michael-0brien.github.io/cryojax/api/simulator/config/)
+                class. Use this argument when it is desired to customize the `image_config`
+                returned from this class, i.e.
+                `value = parameter_file[0:7]; print(value["image_config"])`.
         """  # noqa: E501
 
         # Private attributes
-        _mode = _validate_mode(mode)
-        assert _mode == "r", (
-            "Writing mode is not currently supported for CryoSPARC files."
-        )
+
+        # cryosparc provides the optics information per image
+        _max_optics_groups = -1
+
         self._options = _dict_to_options(options)
-        self._mode = _mode
+        self._mode = "r"  # fixed
 
         # The CryoSPARC file data
         self._path_to_csfile = pathlib.Path(path_to_csfile)
         self._csfile_data = _load_csfile_data(self._path_to_csfile, selection_filter)
+        self._lock = threading.Lock()
+
+    @classmethod
+    def load(
+        cls: type[Self],
+        path_to_csfile: str | pathlib.Path,
+        *,
+        selection_filter: dict[str, Callable] = {},
+        # For loading via `value = dataset[index]`
+        loads_metadata: bool = False,
+        loads_envelope: bool = False,
+        make_image_config: MakeImageConfig = default_make_image_config,
+    ) -> Self:
+        """Convenience wrapper for
+        [`cryospax.CryoSparcParticleParameterFile.__init__`][] in
+        `mode = 'r'` and reading via `parameter_info = parameter_file[index]`.
+        """
+        return cls(
+            path_to_csfile,
+            selection_filter=selection_filter,
+            options={
+                "loads_metadata": loads_metadata,
+                "loads_envelope": loads_envelope,
+                "make_image_config": make_image_config,
+            },
+        )
 
     @override
     def __getitem__(
@@ -295,27 +305,18 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
         n_rows = self.csfile_data.shape[0]
         _validate_dataset_index(type(self), index, n_rows)
         # ... read particle data at the requested indice
-        csparc_data_at_index = self.csfile_data.iloc[index]
+        csfile_data_at_index = self.csfile_data.iloc[index]
 
         # Load the image stack and CryoSPARC file parameters
         image_config, transfer_theory, pose = _make_pytrees_from_csfile(
-            csparc_data_at_index, self.loads_envelope, self.make_image_config
+            csfile_data_at_index, self.loads_envelope, self.make_image_config
         )
         parameter_info = _ParticleParameterInfo(
             image_config=image_config, pose=pose, transfer_theory=transfer_theory
         )
+
         if self.loads_metadata:
-            # ... convert to dataframe for serialization
-            if isinstance(csparc_data_at_index, pd.Series):
-                csparc_data_at_index = csparc_data_at_index.to_frame().T
-            # ... no overlapping keys with loaded pytrees
-            redundant_entry_labels, _ = list(zip(*CSPARC_SUPPORTED_PARTICLE_ENTRIES))
-            columns = csparc_data_at_index.columns
-            remove_columns = [
-                column for column in columns if column in redundant_entry_labels
-            ]
-            metadata = csparc_data_at_index.drop(remove_columns, axis="columns")
-            parameter_info["metadata"] = metadata
+            parameter_info["metadata"] = self.get_metadata(index)
 
         return parameter_info
 
@@ -385,24 +386,6 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
     def loads_envelope(self, value: bool):
         self._options["loads_envelope"] = value
 
-    @property
-    @override
-    def updates_optics_group(self) -> bool:
-        raise NotImplementedError
-
-    @updates_optics_group.setter
-    @override
-    def updates_optics_group(self, value: bool):
-        raise NotImplementedError
-
-    @property
-    def inverts_rotation(self) -> bool:
-        return self._inverts_rotation
-
-    @inverts_rotation.setter
-    def inverts_rotation(self, value: bool):
-        self._inverts_rotation = value
-
     @override
     def __setitem__(
         self,
@@ -442,6 +425,24 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
     def make_image_config(self, value: MakeImageConfig):
         self._options["make_image_config"] = value
 
+    def __deepcopy__(self, memo):
+        # This is a nasty hack to ensure that this class
+        # works with its `parameter_file.copy()` routine!
+        # The `threading.Lock()` class does not work under
+        # `deepcopy`, so we need to manually reset it.
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+
+        for k, v in self.__dict__.items():
+            if k == "_lock":
+                continue
+            setattr(result, k, copy.deepcopy(v, memo))
+
+        result._lock = threading.Lock()
+
+        return result
+
 
 class CryoSparcParticleDataset(
     AbstractParticleDataset[_ParticleStackInfo, _ParticleStackLike]
@@ -454,57 +455,54 @@ class CryoSparcParticleDataset(
     def __init__(
         self,
         parameter_file: AbstractParticleCryoSparcFile,
-        path_to_relion_project: str | pathlib.Path,
-        mode: Literal["r", "w"] = "r",
+        path_to_csparc_project: str | pathlib.Path,
         *,
-        mrcfile_settings: dict[str, Any] = {},
         only_images: bool = False,
     ):
         """**Arguments:**
 
-        - `path_to_relion_project`:
+        - `path_to_csparc_project`:
             In CryoSPARC files, only a relative path is added to the
             'blob/path' column. This is relative to the path to the
             "project", which is given by this parameter.
         - `parameter_file`:
             The `CryoSparcParticleParameterFile`.
-         - `mode`:
-             - If `mode = 'r'`, the CryoSPARC parameters file at `path_to_csfile` is read
-             into `CryoSparcParticleParameterFile.csfile_data`.
-             - mode = 'w'` is not currently supported.
-        - mrcfile_settings:
-            Currently not used for this type of dataset
-            as writing mode is not implemented.
         - `only_images`:
             If `False`, load parameters and images. Otherwise, load only images.
 
         """
-        # Set properties. First, core properties of the dataset, starting
-        # with the `mode``
-        _mode = _validate_mode(mode)
-        assert _mode == "r", (
-            "Writing mode is not currently supported for CryoSPARC datasets."
-        )
-        self._mode = _mode
-
-        particle_data = parameter_file.csfile_data
+        # Set fixed attributes
+        self._mode = "r"
+        self._mrcfile_settings = {}
 
         self._parameter_file = parameter_file
         # ... properties common to reading and writing images
-        self._path_to_relion_project = pathlib.Path(path_to_relion_project)
+        self._path_to_csparc_project = pathlib.Path(path_to_csparc_project)
         # ... properties for reading images
         self._only_images = only_images
         # ... properties for writing images
-        self._mrcfile_settings = mrcfile_settings
         # Now, initialize for `mode = 'r'` vs `mode = 'w'`
-        images_exist = "blob/path" in particle_data.columns
-        project_exists = self.path_to_relion_project.exists()
+        images_exist = "blob/path" in parameter_file.csfile_data.columns
+        project_exists = self.path_to_csparc_project.exists()
         if not images_exist:
             raise OSError(
                 "Could not find column 'blob/path' in the CryoSparc metadata file. "
             )
         if not project_exists:
             raise FileNotFoundError("The CSPARC project directory does not exist.")
+
+        maximum_file_index = _get_maximum_file_index(self.csfile_data["blob/path"])
+
+        if pd.isna(maximum_file_index):
+            raise OSError(
+                "Tried to retrieve the maximum file index in the "
+                "CryoSparc file 'blob/path' column, but did not correctly "
+                "parse the filenames. Make sure that filenames end "
+                "with some kind of numerical indexing, e.g. "
+                "'img_00000.mrcs'."
+            )
+        self._next_file_index = maximum_file_index + 1
+        self._lock = threading.Lock()
 
     @override
     def __getitem__(
@@ -524,22 +522,20 @@ class CryoSparcParticleDataset(
         if not self.only_images:
             # Load images and parameters. First, read parameters
             # and metadata from the .cs file
-            loads_metadata = self.parameter_file.loads_metadata
-            self.parameter_file.loads_metadata = True
             # ... read parameters
             parameters = self.parameter_file[index]
-            # ... validate the metadata
-            csparc_data_at_index = cast(pd.DataFrame, parameters["metadata"])
-            _validate_csparc_image_name_exists(csparc_data_at_index, index)
-            # ... reset boolean to original value
-            self.parameter_file.loads_metadata = loads_metadata
-            if not loads_metadata:
-                del parameters["metadata"]
+            # ... and the metadata
+            if self.parameter_file.loads_metadata:
+                csfile_data_at_index = parameters["metadata"]
+            else:
+                csfile_data_at_index = self.parameter_file.get_metadata(index)
+            _validate_csparc_image_name_exists(csfile_data_at_index, index)
+
             # ... grab shape
             shape = parameters["image_config"].shape
             # ... load stack of images
             images = _load_image_stack_from_mrc(
-                shape, csparc_data_at_index, self.path_to_relion_project
+                shape, csfile_data_at_index, self.path_to_csparc_project
             )
             # ... make sure images and parameters have same leading dim
             if parameters["pose"].offset_x_in_angstroms.ndim == 0:
@@ -550,20 +546,26 @@ class CryoSparcParticleDataset(
         else:
             # Otherwise, do not read parameters to more efficiently read images. First,
             # validate the dataset index.
-            n_rows = self.parameter_file.csfile_data.shape[0]
-            _validate_dataset_index(type(self), index, n_rows)
-            # ... read particle data at the requested indices
-            particle_data = self.parameter_file.csfile_data
-            csparc_data_at_index = particle_data.iloc[index]
-            if isinstance(csparc_data_at_index, pd.Series):
-                csparc_data_at_index = csparc_data_at_index.to_frame().T
-            _validate_csparc_image_name_exists(csparc_data_at_index, index)
+            num_particles = len(self.parameter_file)
+            _validate_dataset_index(type(self), index, num_particles)
+            # ... read particle data at the request index
+            csfile_data_at_index = self.parameter_file.csfile_data.iloc[index]
+            if isinstance(csfile_data_at_index, pd.Series):
+                csfile_data_at_index = csfile_data_at_index.to_frame().T
+            _validate_csparc_image_name_exists(csfile_data_at_index, index)
+            # ... grab shape
             # ... grab shape by reading the optics group
-            shape = tuple(int(x) for x in csparc_data_at_index["blob/shape"][0])
+            shape = csfile_data_at_index["blob/shape"]
+            if isinstance(shape, pd.Series):
+                shape = shape.iloc[0]
+            else:
+                shape = shape
+
+            shape = tuple(int(b) for b in shape)
             shape = cast(tuple[int, int], shape)
             # ... load stack of images
             images = _load_image_stack_from_mrc(
-                shape, csparc_data_at_index, self.path_to_relion_project
+                shape, csfile_data_at_index, self.path_to_csparc_project
             )
             # ... make sure image leading dim matches with index query
             if isinstance(index, int) or (
@@ -572,6 +574,10 @@ class CryoSparcParticleDataset(
                 images = np.squeeze(images)
 
             return _ParticleStackInfo(images=images)
+
+    @override
+    def __len__(self) -> int:
+        return len(self.parameter_file)
 
     @override
     def __setitem__(
@@ -596,14 +602,19 @@ class CryoSparcParticleDataset(
             "writing images is not supported for CryoSparcParticleDataset"
         )
 
-    @override
-    def __len__(self) -> int:
-        return len(self.parameter_file)
-
     @property
     @override
     def parameter_file(self) -> AbstractParticleCryoSparcFile:
         return self._parameter_file
+
+    @property
+    def path_to_csparc_project(self) -> pathlib.Path:
+        """The path to the RELION project. Paths in the
+        CryoSPARC file are relative to this directory.
+
+        This cannot be modified after initialization.
+        """
+        return self._path_to_csparc_project
 
     @property
     @override
@@ -616,13 +627,12 @@ class CryoSparcParticleDataset(
         return self._mode  # type: ignore
 
     @property
-    def path_to_relion_project(self) -> pathlib.Path:
-        """The path to the RELION project. Paths in the
-        CryoSPARC file are relative to this directory.
+    def csfile_data(self) -> pd.DataFrame:
+        """The `pandas.DataFrame` of particle STAR file entries.
 
-        This cannot be modified after initialization.
+        Alias to [`cryospax.AbstractRelionParticleParameterFile.particle_data`][].
         """
-        return self._path_to_relion_project
+        return self.parameter_file.csfile_data
 
     @property
     def mrcfile_settings(self) -> _MrcfileOptions:
@@ -656,6 +666,24 @@ class CryoSparcParticleDataset(
     def only_images(self, value: bool):
         self._only_images = value
 
+    def __deepcopy__(self, memo):
+        # This is a nasty hack to ensure that this class
+        # works with its `dataset.copy()` routine!
+        # The `threading.Lock()` class does not work under
+        # `deepcopy`, so we need to manually reset it.
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+
+        for k, v in self.__dict__.items():
+            if k == "_lock":
+                continue
+            setattr(result, k, copy.deepcopy(v, memo))
+
+        result._lock = threading.Lock()
+
+        return result
+
 
 def _load_csfile_data(
     path_to_csfile: pathlib.Path,
@@ -678,32 +706,32 @@ def _load_csfile_data(
 # CryoSPARC file reading
 #
 def _make_pytrees_from_csfile(
-    csparc_data,
+    csfile_data,
     loads_envelope,
     make_image_config,
 ) -> tuple[BasicImageConfig, ContrastTransferTheory, AxisAnglePose]:
     float_dtype = jax.dtypes.canonicalize_dtype(float)
     # Load CTF parameters. First from particle data
     defocus_in_angstroms = (
-        np.asarray(csparc_data["ctf/df1_A"], dtype=float_dtype)
-        + np.asarray(csparc_data["ctf/df2_A"], dtype=float_dtype)
+        np.asarray(csfile_data["ctf/df1_A"], dtype=float_dtype)
+        + np.asarray(csfile_data["ctf/df2_A"], dtype=float_dtype)
     ) / 2
     astigmatism_in_angstroms = np.asarray(
-        csparc_data["ctf/df1_A"], dtype=float_dtype
-    ) - np.asarray(csparc_data["ctf/df2_A"], dtype=float_dtype)
+        csfile_data["ctf/df1_A"], dtype=float_dtype
+    ) - np.asarray(csfile_data["ctf/df2_A"], dtype=float_dtype)
     astigmatism_angle = np.rad2deg(
-        np.asarray(csparc_data["ctf/df_angle_rad"], dtype=float_dtype)
+        np.asarray(csfile_data["ctf/df_angle_rad"], dtype=float_dtype)
     )
     phase_shift = np.rad2deg(
-        np.asarray(csparc_data["ctf/phase_shift_rad"], dtype=float_dtype)
+        np.asarray(csfile_data["ctf/phase_shift_rad"], dtype=float_dtype)
     )
     # Then from optics data
     batch_shape = (
         () if defocus_in_angstroms.ndim == 0 else (defocus_in_angstroms.shape[0],)
     )
-    spherical_aberration_in_mm = np.asarray(csparc_data["ctf/cs_mm"], dtype=float_dtype)
+    spherical_aberration_in_mm = np.asarray(csfile_data["ctf/cs_mm"], dtype=float_dtype)
     amplitude_contrast_ratio = np.asarray(
-        csparc_data["ctf/amp_contrast"], dtype=float_dtype
+        csfile_data["ctf/amp_contrast"], dtype=float_dtype
     )
 
     ctf_params = (
@@ -718,43 +746,43 @@ def _make_pytrees_from_csfile(
     if loads_envelope:
         b_factor, scale_factor = (
             (
-                np.asarray(csparc_data["ctf/bfactor"], dtype=float_dtype)
-                if "ctf/bfactor" in csparc_data.keys()
+                np.asarray(csfile_data["ctf/bfactor"], dtype=float_dtype)
+                if "ctf/bfactor" in csfile_data.keys()
                 else None
             ),
             (
-                np.asarray(csparc_data["ctf/scale"], dtype=float_dtype)
-                if "ctf/scale" in csparc_data.keys()
+                np.asarray(csfile_data["ctf/scale"], dtype=float_dtype)
+                if "ctf/scale" in csfile_data.keys()
                 else None
             ),
         )
     else:
         b_factor, scale_factor = None, None
     # Image config parameters
-    pixel_size = np.asarray(csparc_data["blob/psize_A"], dtype=float_dtype)
-    voltage_in_kilovolts = np.asarray(csparc_data["ctf/accel_kv"], dtype=float_dtype)
+    pixel_size = np.asarray(csfile_data["blob/psize_A"], dtype=float_dtype)
+    voltage_in_kilovolts = np.asarray(csfile_data["ctf/accel_kv"], dtype=float_dtype)
     if len(batch_shape) > 0:
         pixel_size = pixel_size[0]
         voltage_in_kilovolts = voltage_in_kilovolts[0]
     # Pose parameters. Values for the pose are optional,
     # so look to see if each key is present
-    particle_keys = csparc_data.keys()
+    particle_keys = csfile_data.keys()
     # Read the pose. first, xy offsets
 
     if "alignments3D/shift" in particle_keys:
-        csparc_pose_shift = np.array([s for s in csparc_data["alignments3D/shift"]])
+        csparc_pose_shift = np.array([s for s in csfile_data["alignments3D/shift"]])
     elif "alignments_class_0/shift" in particle_keys:
-        csparc_pose_shift = np.array([s for s in csparc_data["alignments_class_0/shift"]])
+        csparc_pose_shift = np.array([s for s in csfile_data["alignments_class_0/shift"]])
     else:
         csparc_pose_shift = np.array([0.0, 0.0])
 
     if "alignments3D/pose" in particle_keys:
         csparc_pose_angles = np.array(
-            [angles for angles in csparc_data["alignments3D/pose"]]
+            [angles for angles in csfile_data["alignments3D/pose"]]
         )
     elif "alignments_class_0/pose" in particle_keys:
         csparc_pose_angles = np.array(
-            [angles for angles in csparc_data["alignments_class_0/pose"]]
+            [angles for angles in csfile_data["alignments_class_0/pose"]]
         )
 
     else:
@@ -782,9 +810,9 @@ def _make_pytrees_from_csfile(
     with jax.default_device(cpu_device):
         # First, create the `BasicImageConfig`
         if len(batch_shape) > 0:
-            image_shape = tuple(int(x) for x in csparc_data["blob/shape"].values[0])
+            image_shape = tuple(int(x) for x in csfile_data["blob/shape"].values[0])
         else:
-            image_shape = tuple(int(x) for x in csparc_data["blob/shape"])
+            image_shape = tuple(int(x) for x in csfile_data["blob/shape"])
         image_config = filter_device_get(
             make_image_config(image_shape, pixel_size, voltage_in_kilovolts)
         )
@@ -830,7 +858,7 @@ def _invert_rotation(pose: AxisAnglePose) -> AxisAnglePose:
 def _load_image_stack_from_mrc(
     shape: tuple[int, int],
     particle_dataframe_at_index: pd.DataFrame,
-    path_to_relion_project: str | pathlib.Path,
+    path_to_csparc_project: str | pathlib.Path,
 ) -> Float[np.ndarray, "... y_dim x_dim"]:
     # Load particle image stack rlnImageName
     mrc_filenames_and_indices = (
@@ -858,7 +886,7 @@ def _load_image_stack_from_mrc(
     # Loop over filenames to fill stack
     for filename in grouped_filenames.index:
         # Get the MRC indices
-        path_to_filename = pathlib.Path(path_to_relion_project, filename)
+        path_to_filename = pathlib.Path(path_to_csparc_project, filename)
         with mrcfile.mmap(path_to_filename, mode="r", permissive=True) as mrc:
             mrc_data = np.asarray(mrc.data)
             mrc_ndim = mrc_data.ndim
@@ -890,11 +918,33 @@ def _validate_csfile_data(csfile_data: pd.DataFrame):
             f"Required keys are {required_particle_keys}."
         )
 
+    # check that all entries in blob/shape are the same
+    if len(set(tuple(x) for x in csfile_data["blob/shape"])) > 1:
+        raise ValueError(
+            "Not all entries in 'blob/shape' are the same. "
+            "This is not currently supported."
+        )
+
+    if len(set(x for x in csfile_data["blob/psize_A"])) > 1:
+        raise ValueError(
+            "Not all entries in 'blob/psize_A' are the same. "
+            "This is not currently supported."
+        )
+
 
 def _validate_csparc_image_name_exists(particle_data, index):
     if "blob/path" not in particle_data.columns:
         raise OSError(
             "Tried to read CryoSparc metadata file for "
-            f"`RelionParticleStackDataset` index = {index}, "
+            f"`CryoSparcParticleStackDataset` index = {index}, "
             "but no entry found for 'blob/path'."
         )
+
+
+def _get_maximum_file_index(rln_image_name) -> int:
+    # TODO: this function ~may~ silently fail if DataFrame is
+    # incorrectly formatted!
+    filenames = rln_image_name.apply(lambda x: pathlib.Path(str(x)).name)
+
+    file_index = filenames.str.extract(r"(\d+)(?:_[^_.]+)?\.[^.]+$", expand=False)
+    return int(file_index.astype("Int64").max(skipna=True))

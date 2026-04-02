@@ -63,9 +63,7 @@ def convert_csparc_to_relion(
     ]
 
     # set image names
-    relion_particle_parameter_file.starfile_data["particles"]["rlnImageName"] = (
-        rln_image_names
-    )
+    relion_particle_parameter_file.particle_data["rlnImageName"] = rln_image_names
 
     return relion_particle_parameter_file
 

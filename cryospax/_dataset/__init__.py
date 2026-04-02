@@ -9,6 +9,7 @@ from .csparc import (
     CryoSparcParticleDataset as CryoSparcParticleDataset,
     CryoSparcParticleParameterFile as CryoSparcParticleParameterFile,
 )
+from .in_axes import get_in_axes as get_in_axes
 from .relion import (
     AbstractRelionParticleParameterFile as AbstractRelionParticleParameterFile,
     RelionParticleDataset as RelionParticleDataset,

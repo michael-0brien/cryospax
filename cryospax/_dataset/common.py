@@ -4,15 +4,15 @@ from collections.abc import Callable
 from typing import Any, Literal, TypedDict
 
 import equinox as eqx
+import equinox.internal as eqxi
 import numpy as np
 import pandas as pd
+from cryojax.jax_util import FloatLike
 from cryojax.ndimage import FourierConstant, FourierGaussian
 from cryojax.simulator import AstigmaticCTF, BasicImageConfig, ContrastTransferTheory
 
 
-MakeImageConfig = Callable[
-    [tuple[int, int], np.ndarray | float, np.ndarray | float], BasicImageConfig
-]
+MakeImageConfig = Callable[[tuple[int, int], FloatLike, FloatLike], BasicImageConfig]
 
 
 class _Options(TypedDict):
@@ -43,6 +43,9 @@ def _default_make_image_config(shape, pixel_size, voltage_in_kilovolts):
         BasicImageConfig(shape, 1.0, 1.0),
         (pixel_size, voltage_in_kilovolts),
     )
+
+
+default_make_image_config = eqxi.doc_repr(_default_make_image_config, "default_fn")
 
 
 def _validate_mode(mode: str) -> Literal["r", "w"]:
@@ -100,20 +103,20 @@ def _validate_dataset_index(cls, index, n_rows):
         if index.start is not None and index.start > n_rows - 1:
             raise IndexError(index_error_msg(index.start))
     elif isinstance(index, np.ndarray):
-        if index.size == 0:
+        if index.ndim > 1:
             raise IndexError(
-                "Found that the index passed to the dataset "
-                "was an empty numpy array. Please pass a "
-                "supported index."
+                f"Tried to index {cls.__name__} by a numpy "
+                f"array, but found that the array had `ndim = {index.ndim}`. "
+                "Only 0-d and 1-d numpy arrays are supported."
             )
     else:
         raise IndexError(
             f"Indexing with the type {type(index)} is not supported by "
             f"`{cls.__name__}`. Indexing by integers is supported, one-dimensional "
             "fancy indexing is supported, and numpy-array indexing is supported. "
-            "For example, like `particle = particle_dataset[0]`, "
-            "`particle_stack = particle_dataset[0:5]`, "
-            "or `particle_stack = dataset[np.array([1, 4, 3, 2])]`."
+            "For example, like `value = dataset[0]`, "
+            "`value = dataset[0:5]`, "
+            "or `value = dataset[np.array([1, 4, 3, 2])]`."
         )
 
 

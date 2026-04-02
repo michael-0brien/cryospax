@@ -7,7 +7,7 @@ import numpy as np
 from cryojax.jax_util import NDArrayLike, filter_bscan, make_filter_spec
 from jaxtyping import Array, Float, Int, PyTree
 
-from ._dataset import AbstractParticleDataset, AbstractParticleParameterFile
+from ._dataset import AbstractParticleDataset, AbstractParticleParameterFile, get_in_axes
 
 
 PerParticleT = TypeVar("PerParticleT")
@@ -174,18 +174,13 @@ def simulate_particle_stack(
             "(`mode = 'r'`), but this must be instantiated in "
             "writing mode (`mode = 'w'`)."
         )
-    if dataset.parameter_file.loads_metadata:
-        raise ValueError(
-            "Found that the `dataset.parameter_file` was "
-            "instantiated with `loads_metadata = True`, but "
-            "this must be set to `False` when simulating "
-            "particles. Otherwise a JAX error will occur."
-        )
     n_particles = len(dataset)
     images_per_file = n_particles if images_per_file is None else images_per_file
+    parameter_file = dataset.parameter_file
     # Get function that simulates batch of images
     simulate_batch_fn = _configure_simulation_fn(
         simulate_fn,
+        parameter_file,
         batch_size,
         images_per_file,
     )
@@ -194,7 +189,6 @@ def simulate_particle_stack(
         n_particles // images_per_file,
         n_particles % images_per_file,
     )
-    parameter_file = dataset.parameter_file
     for file_index in range(n_iterations):
         dataset_index = np.arange(
             file_index * images_per_file, (file_index + 1) * images_per_file, dtype=int
@@ -209,7 +203,9 @@ def simulate_particle_stack(
         dataset.write_images(dataset_index, images, parameter_info)
     # ... handle remainder
     if remainder > 0:
-        simulate_batch_fn = _configure_simulation_fn(simulate_fn, batch_size, remainder)
+        simulate_batch_fn = _configure_simulation_fn(
+            simulate_fn, parameter_file, batch_size, remainder
+        )
         index_array = np.arange(n_particles - remainder, n_particles, dtype=int)
         images, parameter_info = _simulate_images(
             index_array,
@@ -245,6 +241,7 @@ def _configure_simulation_fn(
         [PyTree, ConstantT, PerParticleT],
         Float[Array, "_ _"],
     ],
+    parameter_file: AbstractParticleParameterFile,
     batch_size: int | None,
     images_per_file: int,
 ) -> Callable[
@@ -282,11 +279,7 @@ def _configure_simulation_fn(
         compute_vmap = eqx.filter_vmap(
             simulate_fn,
             in_axes=(
-                dict(
-                    pose=eqx.if_array(0),
-                    transfer_theory=eqx.if_array(0),
-                    image_config=None,
-                ),
+                get_in_axes(parameter_file),
                 None,
                 eqx.if_array(0),
             ),
