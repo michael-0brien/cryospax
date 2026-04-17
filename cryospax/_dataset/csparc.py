@@ -135,6 +135,14 @@ class AbstractParticleCryoSparcFile(
         raise NotImplementedError
 
     @property
+    def path_to_passthrough_csfile(self) -> pathlib.Path | None:
+        raise NotImplementedError
+
+    @path_to_passthrough_csfile.setter
+    def path_to_passthrough_csfile(self, value: str | pathlib.Path | None):
+        raise NotImplementedError
+
+    @property
     @abc.abstractmethod
     def csfile_data(self) -> pd.DataFrame:
         raise NotImplementedError
@@ -207,6 +215,7 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
         self,
         path_to_csfile: str | pathlib.Path,
         *,
+        path_to_passthrough_csfile: str | pathlib.Path | None = None,
         selection_filter: dict[str, Callable] | None = None,
         options: dict[str, Any] = {},
     ):
@@ -254,7 +263,14 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
 
         # The CryoSPARC file data
         self._path_to_csfile = pathlib.Path(path_to_csfile)
-        self._csfile_data = _load_csfile_data(self._path_to_csfile, selection_filter)
+        self._path_to_passthrough_csfile = (
+            pathlib.Path(path_to_passthrough_csfile)
+            if path_to_passthrough_csfile is not None
+            else None
+        )
+        self._csfile_data = _load_csfile_data(
+            self._path_to_csfile, self._path_to_passthrough_csfile, selection_filter
+        )
         self._lock = threading.Lock()
 
     @classmethod
@@ -262,6 +278,7 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
         cls: type[Self],
         path_to_csfile: str | pathlib.Path,
         *,
+        path_to_passthrough_csfile: str | pathlib.Path | None = None,
         selection_filter: dict[str, Callable] = {},
         # For loading via `value = dataset[index]`
         loads_metadata: bool = False,
@@ -274,6 +291,7 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
         """
         return cls(
             path_to_csfile,
+            path_to_passthrough_csfile=path_to_passthrough_csfile,
             selection_filter=selection_filter,
             options={
                 "loads_metadata": loads_metadata,
@@ -333,6 +351,18 @@ class CryoSparcParticleParameterFile(AbstractParticleCryoSparcFile):
     @override
     def path_to_csfile(self, value: str | pathlib.Path):
         self._path_to_medata = pathlib.Path(value)
+
+    @property
+    @override
+    def path_to_passthrough_csfile(self) -> pathlib.Path | None:
+        return self._path_to_passthrough_csfile
+
+    @path_to_passthrough_csfile.setter
+    @override
+    def path_to_passthrough_csfile(self, value: str | pathlib.Path | None):
+        self._path_to_passthrough_csfile = (
+            pathlib.Path(value) if value is not None else None
+        )
 
     @property
     @override
@@ -687,10 +717,13 @@ class CryoSparcParticleDataset(
 
 def _load_csfile_data(
     path_to_csfile: pathlib.Path,
+    path_to_passthrough_csfile: pathlib.Path | None,
     selection_filter: dict[str, Callable] | None,
 ) -> pd.DataFrame:
     if path_to_csfile.exists():
-        csfile_data = read_csparc_data(path_to_csfile)
+        csfile_data = read_csparc_data(
+            path_to_csfile, passthrough_filename=path_to_passthrough_csfile
+        )
         _validate_csfile_data(csfile_data)
         if selection_filter is not None:
             csfile_data = _select_particles(csfile_data, selection_filter)
