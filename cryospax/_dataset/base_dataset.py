@@ -3,20 +3,18 @@
 import abc
 import pathlib
 from copy import deepcopy
-from typing import Generic, Literal, TypeVar
-from typing_extensions import Self
+from typing import Generic, Literal, Self, TypeVar
 
 import numpy as np
 from cryojax.jax_util import NDArrayLike
 from jaxtyping import Float, Int, PyTree
 
 
-T = TypeVar("T")
 T1 = TypeVar("T1")
 T2 = TypeVar("T2")
 
 
-class AbstractDataset(abc.ABC, Generic[T]):
+class AbstractDataset(abc.ABC, Generic[T1]):
     """An abstraction of a dataset in `cryospax`. To create an
     `AbstractDataset`, implement its `__init__`, `__getitem__`, and
     `__len__` methods.
@@ -59,7 +57,7 @@ class AbstractDataset(abc.ABC, Generic[T]):
     """
 
     @abc.abstractmethod
-    def __getitem__(self, index) -> T:
+    def __getitem__(self, index) -> T1:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -132,4 +130,14 @@ class AbstractParticleDataset(AbstractDataset[T1], Generic[T1, T2]):
 
     @property
     def mode(self) -> Literal["r", "w"]:
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def only_images(self) -> bool:
+        raise NotImplementedError
+
+    @only_images.setter
+    @abc.abstractmethod
+    def only_images(self, value: bool):
         raise NotImplementedError
