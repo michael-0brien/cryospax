@@ -615,9 +615,6 @@
 <div class="highlight"><pre><span></span><code><span class="c1"># CryoJAX imports</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">cryospax</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">spx</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>/Users/michael/venvs/cryojax-spa/lib/python3.11/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-  from .autonotebook import tqdm as notebook_tqdm
-</code></pre></div>
 <p>First, we will read in the RELION particle stack using the <code>cryospax</code> particle stack loader <a class="autorefs autorefs-internal" href="../../api/dataset/#cryospax.RelionParticleDataset"><code>cryospax.RelionParticleDataset</code></a>.</p>
 <div class="admonition info">
 <p class="admonition-title">What is a <code>RelionParticleDataset</code>?</p>
@@ -629,61 +626,24 @@ information in the STAR file, such as the contrast transfer function (the <code>
 This abstract interface are part of the <code>cryojax</code> public API!</p>
 </div>
 <div class="highlight"><pre><span></span><code><span class="c1"># Read in the dataset and plot an image</span>
-<span class="n">parameter_file</span> <span class="o">=</span> <span class="n">spx</span><span class="o">.</span><span class="n">RelionParticleParameterFile</span><span class="p">(</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">spx</span><span class="o">.</span><span class="n">RelionParticleDataset</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
     <span class="n">path_to_starfile</span><span class="o">=</span><span class="s2">&quot;./data/ribosome_4ug0_particles.star&quot;</span><span class="p">,</span>
-    <span class="n">options</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
-        <span class="n">loads_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># Set to `True` to load the raw starfile metadata</span>
-        <span class="n">broadcasts_image_config</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># If `True`, this is useful for vmapping</span>
-        <span class="n">loads_envelope</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># If `False`, assumes b_factor is 0 and CTF amplitude is 1</span>
-    <span class="p">),</span>
+    <span class="n">path_to_relion_project</span><span class="o">=</span><span class="s2">&quot;./&quot;</span><span class="p">,</span>
+    <span class="n">loads_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># Set to `True` to load the raw starfile metadata</span>
+    <span class="n">loads_envelope</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># If `False`, assumes b_factor is 0 and CTF amplitude is 1</span>
 <span class="p">)</span>
-<span class="n">dataset</span> <span class="o">=</span> <span class="n">spx</span><span class="o">.</span><span class="n">RelionParticleDataset</span><span class="p">(</span><span class="n">parameter_file</span><span class="p">,</span> <span class="n">path_to_relion_project</span><span class="o">=</span><span class="s2">&quot;./&quot;</span><span class="p">)</span>
 <span class="c1"># ... get the zeroth entry in the STAR file</span>
 <span class="n">particle_info</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="n">eqx</span><span class="o">.</span><span class="n">tree_pprint</span><span class="p">(</span><span class="n">particle_info</span><span class="p">)</span>
-</code></pre></div>
-<div class="highlight"><pre><span></span><code>{
-  &#39;parameters&#39;:
-  {
-    &#39;image_config&#39;:
-    BasicImageConfig(
-      shape=(100, 100),
-      pixel_size=f32[](numpy),
-      voltage_in_kilovolts=f32[](numpy),
-      grid_helper=None,
-      pad_options={&#39;grid_helper&#39;: None, &#39;shape&#39;: (100, 100)}
-    ),
-    &#39;pose&#39;:
-    EulerAnglePose(
-      offset_in_angstroms=f32[2](numpy),
-      phi_angle=f32[](numpy),
-      theta_angle=f32[](numpy),
-      psi_angle=f32[](numpy)
-    ),
-    &#39;transfer_theory&#39;:
-    ContrastTransferTheory(
-      ctf=AstigmaticCTF(
-        defocus_in_angstroms=f32[](numpy),
-        astigmatism_in_angstroms=f32[](numpy),
-        astigmatism_angle=f32[](numpy),
-        spherical_aberration_in_mm=f32[](numpy)
-      ),
-      envelope=None,
-      amplitude_contrast_ratio=f32[](numpy),
-      phase_shift=f32[](numpy)
-    )
-  },
-  &#39;images&#39;: f64[100,100](numpy)
-}
+<span class="c1"># eqx.tree_pprint(particle_info)</span>
 </code></pre></div>
 <p>Upon inspecting the zeroth element of the <code>RelionParticleDataset</code>, we see that a dict is returned with keys 'parameters' and 'images'. Let's grab the image, normalize it, plot it, and make sure the mean and standard deviation are zero and one, respectively.</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Get an image, normalize, and plot it</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">cryojax.ndimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">normalize_image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cryojax.ndimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">standardize_image</span>
 
 
 <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">3.5</span><span class="p">,</span> <span class="mf">3.5</span><span class="p">))</span>
 <span class="n">image</span> <span class="o">=</span> <span class="n">particle_info</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">]</span>
-<span class="n">normalized_image</span> <span class="o">=</span> <span class="n">normalize_image</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+<span class="n">normalized_image</span> <span class="o">=</span> <span class="n">standardize_image</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
 <span class="n">plot_image</span><span class="p">(</span><span class="n">normalized_image</span><span class="p">,</span> <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span>
     <span class="s2">&quot;Image mean:&quot;</span><span class="p">,</span>
@@ -692,12 +652,9 @@ This abstract interface are part of the <code>cryojax</code> public API!</p>
     <span class="n">normalized_image</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span>
 <span class="p">)</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>/var/folders/37/7n3d9k7903zc8cy1_374smt00000gn/T/ipykernel_22264/3259882216.py:2: FutureWarning: &#39;normalize_image&#39; is deprecated and has been renamed to &#39;standardize_image&#39;. The old name will be deprecated in cryoJAX 0.6.0.
-  from cryojax.ndimage import normalize_image
-</code></pre></div>
 <div class="highlight"><pre><span></span><code>Image mean: 2.8991698e-08 Image standard deviation: 1.0000001
 </code></pre></div>
-<p><img alt="img" src="../_data/4b8c5c3ad1a84c38af2aa309c297f1d8.png" /></p>
+<p><img alt="img" src="../_data/ad6c203b78df41ebaec86d9b2d8d2478.png" /></p>
 <p>This image happens to be simulated with <code>cryojax</code> from the structure of the human 80S ribosome (PDB id 4gu0).</p>
 <p>We can also use fancy indexing to access multiple particles at once.</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Access multiple images in the stack</span>
@@ -726,10 +683,11 @@ This abstract interface are part of the <code>cryojax</code> public API!</p>
 <p>Notice that all attributes of the <code>CTF</code> have a leading dimension. For those familiar with RELION STAR format, even the <code>CTF</code> parameters not stored on a per-particle basis (the opticsGroup) have a leading dimension! This is for convenience working with <code>jax.vmap</code> transformations.</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Plot multiple images from the particle stack</span>
 <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
-<span class="p">[</span><span class="n">plot_image</span><span class="p">(</span><span class="n">particle_info</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">][</span><span class="n">idx</span><span class="p">],</span> <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
+<span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+    <span class="n">plot_image</span><span class="p">(</span><span class="n">particle_info</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">][</span><span class="n">index</span><span class="p">],</span> <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 </code></pre></div>
-<p><img alt="img" src="../_data/b180232a3640473caac28c5b07c7ed9a.png" /></p>
+<p><img alt="img" src="../_data/a6f1186b4294404780fe7742d492eec2.png" /></p>
 <p>Computing the power spectrum of an image is a common analysis tool in cryo-EM. This can be done in <code>cryojax</code>!</p>
 <p>First, we simply have to compute our image in fourier space and a grid of wave vector magnitudes.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cryojax.ndimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">rfftn</span>
@@ -741,11 +699,11 @@ This abstract interface are part of the <code>cryojax</code> public API!</p>
 <span class="c1"># ... and the image in fourier space</span>
 <span class="n">fourier_image</span> <span class="o">=</span> <span class="n">rfftn</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
 <span class="c1"># ... and the cartesian coordinate system</span>
-<span class="n">pixel_size</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;image_config&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">pixel_size</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-<span class="n">frequency_grid_in_angstroms</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;image_config&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">frequency_grid_in_angstroms</span>
+<span class="n">image_config</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;image_config&quot;</span><span class="p">]</span>
+<span class="n">pixel_size</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">image_config</span><span class="o">.</span><span class="n">pixel_size</span><span class="p">)</span>
+<span class="n">frequency_grid</span> <span class="o">=</span> <span class="n">image_config</span><span class="o">.</span><span class="n">get_frequency_grid</span><span class="p">(</span><span class="n">physical</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="c1"># ... now, compute a radial coordinate system</span>
-<span class="n">radial_frequency_grid_in_angstroms</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">frequency_grid_in_angstroms</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">radial_frequency_grid</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">frequency_grid</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
 <span class="c1"># ... plot the image in fourier space and the radial frequency grid</span>
 <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 <span class="n">plot_image</span><span class="p">(</span>
@@ -755,16 +713,14 @@ This abstract interface are part of the <code>cryojax</code> public API!</p>
     <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Image log power spectrum&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">plot_image</span><span class="p">(</span>
-    <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">radial_frequency_grid_in_angstroms</span> <span class="o">*</span> <span class="n">pixel_size</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,)),</span>
+    <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">radial_frequency_grid</span> <span class="o">*</span> <span class="n">pixel_size</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,)),</span>
     <span class="n">fig</span><span class="p">,</span>
     <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
     <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Radial frequency grid&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>(100, 100)
-</code></pre></div>
-<p><img alt="img" src="../_data/d6611e20131d4929b4a2c61a7ae855cb.png" /></p>
+<p><img alt="img" src="../_data/2588ff7616254a45a82523d5f117b47c.png" /></p>
 <p>We are now ready to compute and plot the radially averaged power spectrum profile! This simply bins the squared fourier amplitudes according to the <code>radial_frequency_grid</code>.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cryojax.ndimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">compute_binned_powerspectrum</span>
 
@@ -773,7 +729,7 @@ This abstract interface are part of the <code>cryojax</code> public API!</p>
 <span class="n">n_pixels</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;image_config&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">n_pixels</span>
 <span class="n">spectrum</span><span class="p">,</span> <span class="n">frequencies</span> <span class="o">=</span> <span class="n">compute_binned_powerspectrum</span><span class="p">(</span>
     <span class="n">fourier_image</span><span class="p">,</span>
-    <span class="n">radial_frequency_grid_in_angstroms</span><span class="p">,</span>
+    <span class="n">radial_frequency_grid</span><span class="p">,</span>
     <span class="n">pixel_size</span><span class="p">,</span>
     <span class="n">maximum_frequency</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
 <span class="p">)</span>
@@ -788,7 +744,7 @@ This abstract interface are part of the <code>cryojax</code> public API!</p>
  Text(0, 0.5, &#39;radially averaged power spectrum&#39;),
  None]
 </code></pre></div>
-<p><img alt="img" src="../_data/dbca27bbb58040eb959468b2fd7f9c56.png" /></p>
+<p><img alt="img" src="../_data/0cc4e971546c46a6a6a725da57df89d7.png" /></p>
 <p>Here, we see that the Thon rings in our power spectrum are faint since the pixel since of our images is <span class="arithmatex">\(4 \ \AA\)</span>.</p>
 
 

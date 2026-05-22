@@ -592,6 +592,9 @@
 
   <h1>Simulate particles and write STAR file</h1>
 
+<div class="highlight"><pre><span></span><code><span class="o">%</span><span class="n">load_ext</span> <span class="n">autoreload</span>
+<span class="o">%</span><span class="n">autoreload</span> <span class="mi">2</span>
+</code></pre></div>
 <p>This tutorial demonstrates how to simulate a cryo-EM dataset through cryoJAX's built-in STAR file utilities. In doing so, the tutorial builds off of the <a href="https://michael-0brien.github.io/cryojax/examples/extending-cryojax/">tutorial</a> demonstrating how to make custom image simulation methods.</p>
 <p>This tutorial is split into three parts:</p>
 <p>1) Generate a STAR file of particle parameters
@@ -675,13 +678,12 @@
 
 
 <span class="c1"># Generate particle parameters. First, the image config</span>
-<span class="n">pad_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">))</span>
 
 <span class="n">config</span> <span class="o">=</span> <span class="n">cxs</span><span class="o">.</span><span class="n">BasicImageConfig</span><span class="p">(</span>
     <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">150</span><span class="p">,</span> <span class="mi">150</span><span class="p">),</span>
     <span class="n">pixel_size</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
     <span class="n">voltage_in_kilovolts</span><span class="o">=</span><span class="mf">300.0</span><span class="p">,</span>
-    <span class="n">pad_options</span><span class="o">=</span><span class="n">pad_options</span><span class="p">,</span>
+    <span class="n">padded_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span>
 <span class="p">)</span>
 <span class="c1"># ... RNG keys</span>
 <span class="n">number_of_images</span> <span class="o">=</span> <span class="mi">100</span>
@@ -689,18 +691,24 @@
 <span class="c1"># ... make parameters</span>
 <span class="n">particle_parameters</span> <span class="o">=</span> <span class="n">make_particle_parameters</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>/Users/michael/venvs/cryojax-spa/lib/python3.11/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-  from .autonotebook import tqdm as notebook_tqdm
-</code></pre></div>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cryospax</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">spx</span>
 
 
 <span class="c1"># Generate STAR file</span>
+<span class="n">make_image_config</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">_shape</span><span class="p">,</span> <span class="n">_pixel_size</span><span class="p">,</span> <span class="n">_voltage_in_kilovolts</span><span class="p">:</span> <span class="p">(</span>
+    <span class="n">cxs</span><span class="o">.</span><span class="n">BasicImageConfig</span><span class="p">(</span>
+        <span class="n">_shape</span><span class="p">,</span>
+        <span class="n">_pixel_size</span><span class="p">,</span>
+        <span class="n">_voltage_in_kilovolts</span><span class="p">,</span>
+        <span class="n">padded_shape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">padded_shape</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
 <span class="n">parameter_file</span> <span class="o">=</span> <span class="n">spx</span><span class="o">.</span><span class="n">RelionParticleParameterFile</span><span class="p">(</span>
     <span class="n">path_to_starfile</span><span class="o">=</span><span class="s2">&quot;./outputs/particles.star&quot;</span><span class="p">,</span>
     <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span>  <span class="c1"># writing mode!</span>
+    <span class="n">max_optics_groups</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># maximum allowed optics group writes</span>
     <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># in case the file already exists</span>
-    <span class="n">options</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">broadcasts_image_config</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">pad_options</span><span class="o">=</span><span class="n">pad_options</span><span class="p">),</span>
+    <span class="n">options</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">make_image_config</span><span class="o">=</span><span class="n">make_image_config</span><span class="p">),</span>
 <span class="p">)</span>
 <span class="n">parameter_file</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">particle_parameters</span><span class="p">)</span>
 <span class="n">parameter_file</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -807,7 +815,7 @@ mean and standard deviation of our simulated image without noise. After normaliz
         <span class="n">particle_parameters</span><span class="p">[</span><span class="s2">&quot;transfer_theory&quot;</span><span class="p">],</span>
     <span class="p">)</span>
     <span class="n">mask</span> <span class="o">=</span> <span class="n">im</span><span class="o">.</span><span class="n">CircularCosineMask</span><span class="p">(</span>
-        <span class="n">coordinate_grid</span><span class="o">=</span><span class="n">image_config</span><span class="o">.</span><span class="n">coordinate_grid_in_angstroms</span><span class="p">,</span>
+        <span class="n">coordinate_grid</span><span class="o">=</span><span class="n">image_config</span><span class="o">.</span><span class="n">get_coordinate_grid</span><span class="p">(</span><span class="n">physical</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
         <span class="n">radius</span><span class="o">=</span><span class="mf">150.0</span><span class="p">,</span>
         <span class="n">rolloff_width</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
         <span class="n">xy_offset</span><span class="o">=</span><span class="n">pose</span><span class="o">.</span><span class="n">offset_in_angstroms</span><span class="p">,</span>
@@ -844,7 +852,7 @@ mean and standard deviation of our simulated image without noise. After normaliz
 <div class="highlight"><pre><span></span><code>(&lt;Figure size 300x300 with 2 Axes&gt;,
  &lt;Axes: title={&#39;center&#39;: &#39;Simulated Image&#39;}&gt;)
 </code></pre></div>
-<p><img alt="img" src="../_data/bb8a8c2c2649452094cd7fba5a9beadb.png" /></p>
+<p><img alt="img" src="../_data/f88fc08e84654fbea79747ba265fdc8c.png" /></p>
 <p>Finally, simulate a dataset using <a class="autorefs autorefs-internal" href="../../api/simulate-particles/#cryospax.simulate_particle_stack"><code>cryospax.simulate_particle_stack</code></a>.</p>
 <div class="admonition info">
 <p class="admonition-title">The <code>simulate_particle_stack</code> tool</p>
@@ -868,7 +876,7 @@ the MRC files.</p>
     <span class="n">parameter_file</span><span class="p">,</span>
     <span class="n">path_to_relion_project</span><span class="o">=</span><span class="n">path_to_relion_project</span><span class="p">,</span>
     <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span>
-    <span class="n">mrcfile_settings</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;overwrite&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;output_folder&quot;</span><span class="p">:</span> <span class="n">mrcfile_output_folder</span><span class="p">},</span>
+    <span class="n">mrcfile_options</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;overwrite&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;output_folder&quot;</span><span class="p">:</span> <span class="n">mrcfile_output_folder</span><span class="p">},</span>
 <span class="p">)</span>
 </code></pre></div>
 <p>Finally, let's use <code>simulate_particle_stack</code> to simulate images. </p>
@@ -878,7 +886,7 @@ the MRC files.</p>
     <span class="n">simulate_fn</span><span class="p">,</span>
     <span class="n">constant_args</span><span class="o">=</span><span class="n">conformational_space</span><span class="p">,</span>
     <span class="n">per_particle_args</span><span class="o">=</span><span class="n">rng_keys</span><span class="p">,</span>
-    <span class="n">batch_size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>  <span class="c1"># how many images to simulate in parallel</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># how many images to simulate in parallel</span>
     <span class="n">images_per_file</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>  <span class="c1"># how many images in each MRC file</span>
     <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
@@ -904,7 +912,7 @@ the MRC files.</p>
 <span class="n">particles</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">9</span><span class="p">]</span>
 <span class="n">plot_image_stack</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">])</span>
 </code></pre></div>
-<p><img alt="img" src="../_data/cef25aff093d4f64bce1df27651c6787.png" /></p>
+<p><img alt="img" src="../_data/ebcf29382b324d87994e7d6cf73c09c0.png" /></p>
 
 
 
