@@ -363,6 +363,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             exist_ok,
             num_particles,
             max_optics_groups,
+            loads_envelope=self._options["loads_envelope"],
         )
         self._starfile_data = starfile_data
         self._num_optics_groups, self._next_optics_group_index = optics_group_info
@@ -376,6 +377,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         *,
         max_optics_groups: int = 1,
         exist_ok: bool = False,
+        loads_envelope: bool = False,
     ) -> Self:
         """Convenience wrapper for
         [`cryospax.RelionParticleParameterFile.__init__`][] in
@@ -389,6 +391,7 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             exist_ok=exist_ok,
             num_particles=num_particles,
             max_optics_groups=max_optics_groups,
+            options=dict(loads_envelope=loads_envelope),
         )
 
     @classmethod
@@ -567,6 +570,14 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
         particle_data.loc[
             particle_data.index[index], particle_data_for_update.columns
         ] = particle_data_for_update.values
+        if (optics_data["rlnImageSize"].dropna().astype(int) % 2 != 0).any():
+            warnings.warn(
+                "Found odd image size in STAR file. We have observed that odd "
+                "images tend to result in bad reconstructions in Relion, probably "
+                "due to wrong angles and shifts as the conventions might differ "
+                "when the image size is odd. Be careful, and make sure your "
+                "pipeline behaves as expected."
+            )
         self._starfile_data["optics"] = optics_data
         self._starfile_data["particles"] = particle_data
 
@@ -620,6 +631,14 @@ class RelionParticleParameterFile(AbstractRelionParticleParameterFile):
             if len(particle_data) > 0
             else particle_data_to_append
         )
+        if (optics_data["rlnImageSize"].dropna().astype(int) % 2 != 0).any():
+            warnings.warn(
+                "Found odd image size in STAR file. We have observed that odd "
+                "images tend to result in bad reconstructions in Relion, probably "
+                "due to wrong angles and shifts as the conventions might differ "
+                "when the image size is odd. Be careful, and make sure your "
+                "pipeline behaves as expected."
+            )
         self._starfile_data["optics"] = optics_data
         self._starfile_data["particles"] = particle_data
 
@@ -1339,6 +1358,7 @@ def _load_starfile_data(
     exist_ok: bool,
     num_particles: int,
     max_optics_groups: int | None,
+    loads_envelope: bool,
 ) -> tuple[_StarfileData, tuple[int, int]]:
     if mode == "r":
         if path_to_starfile.exists():
@@ -1363,6 +1383,17 @@ def _load_starfile_data(
             if max_optics_groups is None:
                 max_optics_groups = 2 * num_optics_groups
             starfile_data["optics"] = optics_data.reindex(index=range(max_optics_groups))
+
+            if (
+                starfile_data["optics"]["rlnImageSize"].dropna().astype(int) % 2 != 0
+            ).any():
+                warnings.warn(
+                    "Found odd image size in STAR file. We have observed that odd "
+                    "images tend to result in bad reconstructions in Relion, probably "
+                    "due to wrong angles and shifts as the conventions might differ "
+                    "when the image size is odd. Be careful, and make sure your "
+                    "pipeline behaves as expected."
+                )
         else:
             raise FileNotFoundError(
                 f"Set `mode = '{mode}'`, but STAR file {str(path_to_starfile)} does not "
@@ -1382,6 +1413,12 @@ def _load_starfile_data(
                 max_optics_group_index = 1
                 if max_optics_groups is None:
                     max_optics_groups = 1
+
+                relion_particle_entries = (
+                    RELION_SUPPORTED_PARTICLE_ENTRIES
+                    if loads_envelope
+                    else RELION_DEFAULT_PARTICLE_ENTRIES
+                )
                 starfile_data = dict(
                     optics=pd.DataFrame(
                         data={
@@ -1392,7 +1429,7 @@ def _load_starfile_data(
                     particles=pd.DataFrame(
                         data={
                             column: pd.Series(dtype=dtype, index=range(num_particles))
-                            for column, dtype in RELION_DEFAULT_PARTICLE_ENTRIES
+                            for column, dtype in relion_particle_entries
                         }
                     ),
                 )
