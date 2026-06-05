@@ -7,8 +7,8 @@ import threading
 import typing
 import warnings
 from collections.abc import Callable
-from typing import Any, Literal, TypedDict
-from typing_extensions import NotRequired, Self, override
+from typing import Any, Literal, NotRequired, Self, TypedDict
+from typing_extensions import override
 
 import equinox as eqx
 import jax
