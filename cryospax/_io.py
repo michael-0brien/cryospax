@@ -54,6 +54,7 @@ def write_starfile(starfile_data, filename: str | pathlib.Path, **kwargs: Any):
 
 def read_csparc_data(
     filename: pathlib.Path,
+    passthrough_filename: pathlib.Path | None = None,
 ) -> pd.DataFrame:
     """Read a CryoSPARC `.cs` file using `numpy`.
 
@@ -62,12 +63,27 @@ def read_csparc_data(
     - `filename`:
         The path where to read the CryoSPARC file. This must include
         a '.cs' extension.
+    - `additional_csfiles`:
+        Additional CryoSPARC `.cs` files to read. For example, passthrough `.cs` files.
 
     Each entry in this file is used to populate the columns of a `pandas.DataFrame`.
     """
     _validate_filename(filename, mode="r", suffix="cs")
+    if passthrough_filename is not None:
+        _validate_filename(passthrough_filename, mode="r", suffix="cs")
 
-    csfile_data = np.load(filename, allow_pickle=True)
+    particle_data = _cryosparc_data_to_dataframe(filename)
+    if passthrough_filename is not None:
+        passthrough_data = _cryosparc_data_to_dataframe(passthrough_filename)
+        particle_data = particle_data.merge(passthrough_data, on="uid", how="inner")
+
+    return particle_data
+
+
+def _cryosparc_data_to_dataframe(
+    cryosparc_filename: pathlib.Path,
+) -> pd.DataFrame:
+    csfile_data = np.load(cryosparc_filename, allow_pickle=True)
     data_entries = [
         csfile_data.dtype.names[i] for i in range(len(csfile_data.dtype.names))
     ]
