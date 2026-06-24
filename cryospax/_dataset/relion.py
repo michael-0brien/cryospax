@@ -1361,7 +1361,7 @@ def _load_starfile_data(
                     "formatted."
                 )
             if max_optics_groups is None:
-                max_optics_groups = 2 * num_optics_groups
+                max_optics_groups = num_optics_groups
             starfile_data["optics"] = optics_data.reindex(index=range(max_optics_groups))
         else:
             raise FileNotFoundError(
