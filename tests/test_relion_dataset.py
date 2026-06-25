@@ -444,6 +444,7 @@ def test_no_load_parameters(sample_starfile_path, sample_relion_project_path):
 #
 
 
+@pytest.mark.parametrize("shape", [(4, 4), (5, 5)])
 @pytest.mark.parametrize(
     "index, loads_envelope",
     [
@@ -452,14 +453,14 @@ def test_no_load_parameters(sample_starfile_path, sample_relion_project_path):
         (0, True),
     ],
 )
-def test_append_particle_parameters(index, loads_envelope):
+def test_append_particle_parameters(index, loads_envelope, shape):
     index = np.asarray(index)
     ndim = index.ndim
 
     @eqx.filter_vmap
     def make_particle_params(_):
         image_config = cxs.BasicImageConfig(
-            shape=(4, 4),
+            shape=shape,
             pixel_size=1.5,
             voltage_in_kilovolts=300.0,
         )
@@ -514,6 +515,7 @@ def test_append_particle_parameters(index, loads_envelope):
     assert compare_dicts(loaded_particle_params, particle_params)
 
 
+@pytest.mark.parametrize("shape", [(4, 4), (5, 5)])
 @pytest.mark.parametrize(
     "index, sets_envelope",
     [
@@ -527,6 +529,7 @@ def test_set_particle_parameters(
     sample_starfile_path,
     index,
     sets_envelope,
+    shape,
 ):
     index = np.asarray(index)
     n_particles, ndim = index.size, index.ndim
@@ -539,7 +542,7 @@ def test_set_particle_parameters(
         pose = make_pose(rng_keys)
         return dict(
             image_config=cxs.BasicImageConfig(
-                shape=(4, 4), pixel_size=3.324, voltage_in_kilovolts=121.3
+                shape=shape, pixel_size=3.324, voltage_in_kilovolts=121.3
             ),
             pose=pose,
             transfer_theory=cxs.ContrastTransferTheory(
@@ -576,7 +579,11 @@ def test_set_particle_parameters(
     parameter_file.particle_data["rlnMicrographName"] = pd.Series(dtype=str)
     parameter_file.particle_data["rlnCoordinateX"] = pd.Series(dtype="Int64")
     parameter_file.particle_data["rlnCoordinateY"] = pd.Series(dtype="Int64")
-    parameter_file[index] = new_parameters
+    if shape[0] % 2 != 0:
+        with pytest.warns(UserWarning, match="odd image size"):
+            parameter_file[index] = new_parameters
+    else:
+        parameter_file[index] = new_parameters
     # Make sure custom metadata was added
     particle_dataframe = parameter_file.particle_data
     assert set(metadata.columns).issubset(particle_dataframe.columns)
@@ -824,70 +831,56 @@ def test_write_particle_batched_particle_parameters():
     return
 
 
-def test_write_starfile_different_envs():
-    def _make_particle_params(envelope):
-        image_config = cxs.BasicImageConfig(
-            shape=(4, 4),
-            pixel_size=1.5,
-            voltage_in_kilovolts=300.0,
-        )
-
-        pose = cxs.EulerAnglePose()
-        transfer_theory = cxs.ContrastTransferTheory(
-            ctf=cxs.AstigmaticCTF(),
-            envelope=envelope,
-        )
-        return {
-            "image_config": image_config,
-            "pose": pose,
-            "transfer_theory": transfer_theory,
-        }
-
-    particle_params = _make_particle_params(im.FourierGaussian())
-    new_parameters_file = RelionParticleParameterFile.empty(
-        path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
-        exist_ok=True,
-        num_particles=0,
-        max_optics_groups=1,
+def _make_particle_params(envelope):
+    image_config = cxs.BasicImageConfig(
+        shape=(4, 4),
+        pixel_size=1.5,
+        voltage_in_kilovolts=300.0,
     )
-    new_parameters_file.append(particle_params)
+    pose = cxs.EulerAnglePose()
+    transfer_theory = cxs.ContrastTransferTheory(
+        ctf=cxs.AstigmaticCTF(),
+        envelope=envelope,
+    )
+    return {
+        "image_config": image_config,
+        "pose": pose,
+        "transfer_theory": transfer_theory,
+    }
+
+
+@pytest.mark.parametrize(
+    "envelope,loads_envelope",
+    [
+        (im.FourierGaussian(), True),
+        (im.FourierConstant(1.0), True),
+        (None, False),
+    ],
+)
+def test_write_starfile_different_envs(envelope, loads_envelope, tmp_path):
+    particle_params = _make_particle_params(envelope)
+    new_parameters_file = RelionParticleParameterFile.empty(
+        path_to_starfile=tmp_path / "test_particle_parameters.star",
+        exist_ok=True,
+        num_particles=1,
+        max_optics_groups=1,
+        loads_envelope=loads_envelope,
+    )
+    new_parameters_file[0] = particle_params
     new_parameters_file.save(overwrite=True)
 
-    particle_params = _make_particle_params(im.FourierConstant(1.0))
-    new_parameters_file = RelionParticleParameterFile.empty(
-        path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
-        exist_ok=True,
-        num_particles=0,
-        max_optics_groups=1,
-    )
-    new_parameters_file.append(particle_params)
-    new_parameters_file.save(overwrite=True)
 
-    particle_params = _make_particle_params(None)
-    new_parameters_file = RelionParticleParameterFile.empty(
-        path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
-        exist_ok=True,
-        num_particles=0,
-        max_optics_groups=1,
-    )
-    new_parameters_file.append(particle_params)
-    new_parameters_file.save(overwrite=True)
-
+def test_write_starfile_unsupported_envelope(tmp_path):
     with pytest.raises(ValueError):
         particle_params = _make_particle_params(im.FourierDC(1.0))
         new_parameters_file = RelionParticleParameterFile.empty(
-            path_to_starfile="tests/outputs/starfile_writing/test_particle_parameters.star",
+            path_to_starfile=tmp_path / "test_particle_parameters.star",
             exist_ok=True,
             num_particles=0,
             max_optics_groups=1,
         )
         new_parameters_file.append(particle_params)
         new_parameters_file.save(overwrite=True)
-
-    # Clean up
-    shutil.rmtree("tests/outputs/starfile_writing/")
-
-    return
 
 
 def test_raise_errors_parameter_file(sample_starfile_path):
