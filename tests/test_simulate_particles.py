@@ -206,11 +206,12 @@ def test_write_single_image(sample_starfile_path):
     return
 
 
-def test_load_multiple_mrcs():
+@pytest.mark.parametrize("shape", [(4, 4), (5, 5)])
+def test_load_multiple_mrcs(shape):
     @partial(eqx.filter_vmap, in_axes=(0), out_axes=eqx.if_array(0))
     def _make_particle_params(dummy_idx):
         image_config = cxs.BasicImageConfig(
-            shape=(4, 4),
+            shape=shape,
             pixel_size=1.5,
             voltage_in_kilovolts=300.0,
         )
@@ -236,7 +237,11 @@ def test_load_multiple_mrcs():
         exist_ok=True,
         options=dict(loads_envelope=True),
     )
-    parameters_file.append(particle_params)
+    if shape[0] % 2 != 0:
+        with pytest.warns(UserWarning, match="odd image size"):
+            parameters_file.append(particle_params)
+    else:
+        parameters_file.append(particle_params)
 
     n_images = len(parameters_file)
     # print(f"Number of images: {n_images}")
