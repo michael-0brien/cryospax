@@ -32,6 +32,7 @@ from .._io import read_starfile, write_starfile
 from .._misc import filter_device_get
 from .base_dataset import AbstractParticleDataset, AbstractParticleParameterFile
 
+
 # RELION column entries
 RELION_CTF_OPTICS_ENTRIES = [
     ("rlnSphericalAberration", "Float64"),
