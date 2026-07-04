@@ -32,7 +32,6 @@ from .._io import read_starfile, write_starfile
 from .._misc import filter_device_get
 from .base_dataset import AbstractParticleDataset, AbstractParticleParameterFile
 
-
 # RELION column entries
 RELION_CTF_OPTICS_ENTRIES = [
     ("rlnSphericalAberration", "Float64"),
@@ -947,14 +946,8 @@ class RelionParticleDataset(
                 self.particle_data["rlnImageName"]
             )
             if pd.isna(maximum_file_index):
-                raise OSError(
-                    "Tried to retrieve the maximum file index in the "
-                    "STAR file 'rlnImageName' column, but did not correctly "
-                    "parse the filenames. Make sure that filenames end "
-                    "with some kind of numerical indexing, e.g. "
-                    "'img_00000.mrcs'."
-                )
-            self._next_file_index = maximum_file_index + 1
+                maximum_file_index = -1
+            self._next_file_index = int(maximum_file_index) + 1
         self._lock = threading.Lock()
 
     @classmethod
@@ -2212,9 +2205,8 @@ def _get_maximum_file_index(rln_image_name) -> int:
     filenames = (
         rln_image_name.str.split("@").str[-1].apply(lambda x: pathlib.Path(x).name)
     )
-
     file_index = filenames.str.extract(r"(\d+)(?:_[^_.]+)?\.[^.]+$", expand=False)
-    return int(file_index.astype("Int64").max(skipna=True))
+    return file_index.astype("Int64").max(skipna=True)
 
 
 def _format_number_for_filename(file_number: int, n_characters: int = 6):
