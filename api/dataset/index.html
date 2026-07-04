@@ -766,7 +766,7 @@
 
 <h4 id="cryospax.AbstractDataset" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.AbstractDataset</code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/8c1d46d0dd82d7a187cc289081e1d9d2fe6f7838/cryospax/_dataset/base_dataset.py#L17-L65"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e5426214fb5dc8df920fa607b00684eefac2818d/cryospax/_dataset/base_dataset.py#L17-L65"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.AbstractDataset" class="headerlink" title="Permanent link">¤</a></h4>
@@ -881,7 +881,7 @@ a normal python class, not a pytree.</p>
 
 <h4 id="cryospax.get_in_axes" class="doc doc-heading">
   <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">cryospax</span><span class="o">.</span><span class="n">get_in_axes</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">cryospax</span><span class="o">.</span><span class="n">AbstractDataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PyTree</span></code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/8c1d46d0dd82d7a187cc289081e1d9d2fe6f7838/cryospax/_dataset/in_axes.py#L10-L44"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e5426214fb5dc8df920fa607b00684eefac2818d/cryospax/_dataset/in_axes.py#L10-L44"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.get_in_axes" class="headerlink" title="Permanent link">¤</a></h4>
@@ -930,7 +930,7 @@ of <code>dataset[...]</code>.</p>
 
 <h4 id="cryospax.AbstractParticleParameterFile" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.AbstractParticleParameterFile(<a class="autorefs autorefs-internal" href="#cryospax.AbstractDataset">cryospax.AbstractDataset</a>)</code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/8c1d46d0dd82d7a187cc289081e1d9d2fe6f7838/cryospax/_dataset/base_dataset.py#L68-L103"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e5426214fb5dc8df920fa607b00684eefac2818d/cryospax/_dataset/base_dataset.py#L68-L103"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.AbstractParticleParameterFile" class="headerlink" title="Permanent link">¤</a></h4>
@@ -1107,7 +1107,7 @@ of <code>dataset[...]</code>.</p>
 
 <h4 id="cryospax.AbstractRelionParticleParameterFile" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.AbstractRelionParticleParameterFile(<a class="autorefs autorefs-internal" href="#cryospax.AbstractParticleParameterFile">cryospax.AbstractParticleParameterFile</a>)</code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/8c1d46d0dd82d7a187cc289081e1d9d2fe6f7838/cryospax/_dataset/relion.py#L151-L253"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e5426214fb5dc8df920fa607b00684eefac2818d/cryospax/_dataset/relion.py#L151-L253"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.AbstractRelionParticleParameterFile" class="headerlink" title="Permanent link">¤</a></h4>
@@ -1439,7 +1439,7 @@ slightly different indexing behavior downstream.</p>
 
 <h4 id="cryospax.RelionParticleParameterFile" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.RelionParticleParameterFile(<a class="autorefs autorefs-internal" href="#cryospax.AbstractRelionParticleParameterFile">cryospax.AbstractRelionParticleParameterFile</a>)</code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/8c1d46d0dd82d7a187cc289081e1d9d2fe6f7838/cryospax/_dataset/relion.py#L256-L826"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e5426214fb5dc8df920fa607b00684eefac2818d/cryospax/_dataset/relion.py#L256-L845"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.RelionParticleParameterFile" class="headerlink" title="Permanent link">¤</a></h4>
@@ -1613,7 +1613,7 @@ or writing via <code>parameter_file[index] = parameter_info</code>.</p>
 
 
 <h5 id="cryospax.RelionParticleParameterFile.empty" class="doc doc-heading">
-  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="n">empty</span><span class="p">(</span><span class="n">path_to_starfile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">,</span> <span class="n">num_particles</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_optics_groups</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">typing</span><span class="o">.</span><span class="n">Self</span></code>
+  <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="n">empty</span><span class="p">(</span><span class="n">path_to_starfile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">,</span> <span class="n">num_particles</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_optics_groups</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">exist_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">loads_envelope</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">typing</span><span class="o">.</span><span class="n">Self</span></code>
   
 
 
@@ -2237,7 +2237,7 @@ classes loaded into <code>parameter_info = parameter_file[index]</code>.</p>
 
 <h4 id="cryospax.AbstractParticleDataset" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.AbstractParticleDataset(<a class="autorefs autorefs-internal" href="#cryospax.AbstractDataset">cryospax.AbstractDataset</a>)</code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/8c1d46d0dd82d7a187cc289081e1d9d2fe6f7838/cryospax/_dataset/base_dataset.py#L106-L143"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e5426214fb5dc8df920fa607b00684eefac2818d/cryospax/_dataset/base_dataset.py#L106-L143"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.AbstractParticleDataset" class="headerlink" title="Permanent link">¤</a></h4>
@@ -2432,7 +2432,7 @@ classes loaded into <code>parameter_info = parameter_file[index]</code>.</p>
 
 <h4 id="cryospax.RelionParticleDataset" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>    <code>cryospax.RelionParticleDataset(<a class="autorefs autorefs-internal" href="#cryospax.AbstractParticleDataset">cryospax.AbstractParticleDataset</a>)</code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/8c1d46d0dd82d7a187cc289081e1d9d2fe6f7838/cryospax/_dataset/relion.py#L829-L1332"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e5426214fb5dc8df920fa607b00684eefac2818d/cryospax/_dataset/relion.py#L848-L1345"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.RelionParticleDataset" class="headerlink" title="Permanent link">¤</a></h4>
@@ -2974,7 +2974,7 @@ better performance when it is not necessary to load parameters.</p>
 
 <h4 id="cryospax.read_starfile" class="doc doc-heading">
   <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">cryospax</span><span class="o">.</span><span class="n">read_starfile</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span></code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/8c1d46d0dd82d7a187cc289081e1d9d2fe6f7838/cryospax/_io.py#L12-L29"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e5426214fb5dc8df920fa607b00684eefac2818d/cryospax/_io.py#L12-L29"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.read_starfile" class="headerlink" title="Permanent link">¤</a></h4>
@@ -3002,7 +3002,7 @@ better performance when it is not necessary to load parameters.</p>
 
 <h4 id="cryospax.write_starfile" class="doc doc-heading">
   <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">cryospax</span><span class="o">.</span><span class="n">write_starfile</span><span class="p">(</span><span class="n">starfile_data</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span></code>
-  <a href="https://github.com/michael-0brien/cryospax/blob/8c1d46d0dd82d7a187cc289081e1d9d2fe6f7838/cryospax/_io.py#L32-L51"><code class='hippogriffe-repo-url'></code></a>
+  <a href="https://github.com/michael-0brien/cryospax/blob/e5426214fb5dc8df920fa607b00684eefac2818d/cryospax/_io.py#L32-L51"><code class='hippogriffe-repo-url'></code></a>
 
 
 <a href="#cryospax.write_starfile" class="headerlink" title="Permanent link">¤</a></h4>
