@@ -6,8 +6,8 @@ import pathlib
 import threading
 import typing
 from collections.abc import Callable
-from typing import Any, Literal, Self, TypedDict, cast
-from typing_extensions import NotRequired, override
+from typing import Any, Literal, NotRequired, Self, TypedDict, cast
+from typing_extensions import override
 
 import equinox as eqx
 import jax
