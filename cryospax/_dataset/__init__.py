@@ -3,10 +3,11 @@ from .base_dataset import (
     AbstractParticleDataset as AbstractParticleDataset,
     AbstractParticleParameterFile as AbstractParticleParameterFile,
 )
-from .conversion import convert_csparc_to_relion as convert_csparc_to_relion
+
+# from .conversion import convert_csparc_to_relion as convert_csparc_to_relion
 from .csparc import (
-    AbstractParticleCryoSparcFile as AbstractParticleCryoSparcFile,
-    CryoSparcParticleDataset as CryoSparcParticleDataset,
+    # AbstractParticleCryoSparcFile as AbstractParticleCryoSparcFile,
+    # CryoSparcParticleDataset as CryoSparcParticleDataset,
     CryoSparcParticleParameterFile as CryoSparcParticleParameterFile,
 )
 from .in_axes import get_in_axes as get_in_axes
