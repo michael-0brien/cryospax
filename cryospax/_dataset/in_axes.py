@@ -4,8 +4,6 @@ import equinox as eqx
 from jaxtyping import PyTree
 
 from .base_dataset import AbstractDataset
-
-# from .csparc import CryoSparcParticleDataset, CryoSparcParticleParameterFile
 from .relion import RelionParticleDataset, RelionParticleParameterFile
 
 
@@ -77,37 +75,5 @@ def _(dataset):
         )
 
 
-# @get_in_axes.register(CryoSparcParticleParameterFile)
-# def _(dataset):
-#     if dataset.loads_metadata:
-#         raise AttributeError(_get_metadata_error_msg(dataset, "dataset.loads_metadata"))
-#     return _get_csparc_parameters_in_axes()
-
-
-# @get_in_axes.register(CryoSparcParticleDataset)
-# def _(dataset):
-#     if dataset.parameter_file.loads_metadata:
-#         raise AttributeError(
-#             _get_metadata_error_msg(dataset, "dataset.parameter_file.loads_metadata")
-#         )
-#     if dataset.only_images:
-#         return dict(images=eqx.if_array(0))
-#     else:
-#         return dict(
-#             images=eqx.if_array(0),
-#             parameters=_get_csparc_parameters_in_axes(),
-#         )
-
-
 def _get_rln_parameters_in_axes():
     return dict(pose=eqx.if_array(0), transfer_theory=eqx.if_array(0), image_config=None)
-
-
-# these are actually the same
-# we should probably just have one function
-def _get_csparc_parameters_in_axes():
-    return dict(
-        pose=eqx.if_array(0),
-        transfer_theory=eqx.if_array(0),
-        image_config=None,
-    )

@@ -1,15 +1,16 @@
 """
-Routines for starfile serialization and deserialization.
+Routines for .cs file serialization
 """
 
 import pathlib
-from typing import Any, Literal, cast
+from typing import Any
 
 import equinox as eqx
 import numpy as np
 import pandas as pd
-import starfile
 from cryojax.rotations import SO3, convert_quaternion_to_euler_angles
+
+from ._utils import _validate_filename
 
 
 # The RELION columns that live in the 'optics' block, i.e. those that define an
@@ -36,48 +37,6 @@ RELION_PARTICLE_COLUMNS = [
     "rlnAngleTilt",
     "rlnAnglePsi",
 ]
-
-
-def read_starfile(filename: str | pathlib.Path, **kwargs: Any) -> dict[str, pd.DataFrame]:
-    """Read a STAR file using
-    [`starfile`](https://github.com/teamtomo/starfile).
-
-    **Arguments:**
-
-    - `filename`:
-        The path where to read the STAR file. This must include
-        a '.star' extension.
-
-    Keyword arguments are passed to `starfile.read`.
-    """
-    # Make sure filename is valid starfile
-    _validate_filename(filename, mode="r", suffix="star")
-    # Read starfile
-    path_to_filename = pathlib.Path(filename)
-    starfile_data = starfile.read(path_to_filename, always_dict=True, **kwargs)
-    return cast(dict[str, pd.DataFrame], starfile_data)
-
-
-def write_starfile(starfile_data, filename: str | pathlib.Path, **kwargs: Any):
-    """Write a STAR file using
-    [`starfile`](https://github.com/teamtomo/starfile).
-
-    **Arguments:**
-
-    - `starfile_data`:
-        A dictionary whose keys are strings and whose entries are
-        `pandas.DataFrame`s.
-    - `filename`:
-        The path where to write the STAR file. This must include
-        a '.star' extension.
-
-    Keyword arguments are passed to `starfile.write`.
-    """
-    # Make sure filename is valid starfile
-    _validate_filename(filename, mode="w", suffix="star")
-    # Write starfile
-    path_to_filename = pathlib.Path(filename)
-    return starfile.write(starfile_data, path_to_filename, **kwargs)  # type: ignore
 
 
 def read_csparc_file(
@@ -125,7 +84,7 @@ def read_csparc_file(
     return csparc_data
 
 
-def read_csparc_file_as_star(
+def read_csparc_file_as_starfile(
     filename: str | pathlib.Path,
     passthrough_filename: str | pathlib.Path | None = None,
 ) -> dict[str, pd.DataFrame]:
@@ -270,9 +229,9 @@ def _convert_csparc_columns_to_relion(csparc_data: pd.DataFrame) -> pd.DataFrame
         euler_angles = _convert_cs_pose_to_relion(
             _column_to_array(csparc_data, "alignments3D/pose")
         )
-        relion_data["rlnAngleRot"] = np.asarray(euler_angles[:, 0])
+        relion_data["rlnAngleRot"] = np.asarray(euler_angles[:, 2])
         relion_data["rlnAngleTilt"] = np.asarray(euler_angles[:, 1])
-        relion_data["rlnAnglePsi"] = np.asarray(euler_angles[:, 2])
+        relion_data["rlnAnglePsi"] = np.asarray(euler_angles[:, 0])
     if "alignments3D/shift" in columns:
         # CryoSPARC shifts are in pixels, RELION origins are in angstroms
         shift = _column_to_array(csparc_data, "alignments3D/shift")
@@ -353,18 +312,6 @@ def _column_to_array(dataframe: pd.DataFrame, column: str) -> np.ndarray:
         values.dtype == object and values.size > 0 and isinstance(values[0], np.ndarray)
     )
     return np.stack(values) if is_stacked_column else values
-
-
-def _validate_filename(
-    filename: str | pathlib.Path, mode: Literal["r", "w"], suffix: Literal["star", "cs"]
-):
-    suffixes = pathlib.Path(filename).suffixes
-    if not (len(suffixes) == 1 and suffixes[0] == f".{suffix}"):
-        raise OSError(
-            f"Tried to {('write' if mode == 'w' else 'read')} {suffix.upper()} file, "
-            f"but the filename does not include a '.{suffix}' "
-            f"suffix. Got filename '{filename}'."
-        )
 
 
 def _convert_cs_pose_to_relion(pose_data):
