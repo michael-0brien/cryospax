@@ -95,10 +95,22 @@ def read_csparc_file_as_starfile(
     RELION STAR file.
 
     CryoSPARC stores optics parameters per particle, while RELION stores them
-    once per optics group. The optics parameters are therefore grouped into
-    their unique combinations, each of which becomes one row of the `'optics'`
-    block with its own `'rlnOpticsGroup'` index. Every particle is then assigned
-    the index of its group, keyed on the CryoSPARC particle `'uid'`.
+    once per optics group. The RELION optics group is taken to be the CryoSPARC
+    exposure group `'ctf/exp_group_id'`, and each exposure group becomes one row
+    of the `'optics'` block, holding the optics parameters of its first particle.
+    If the CryoSPARC file has no `'ctf/exp_group_id'` field, all particles are
+    assigned to a single optics group.
+
+    !!! info "Matching `pyem`"
+
+        This follows [`pyem`](https://github.com/asarnow/pyem). In particular,
+        exposure groups whose optics parameters happen to be equal are *not*
+        merged into one optics group, and the CryoSPARC index is taken to be
+        zero-based, so that `'rlnOpticsGroup'` is `'ctf/exp_group_id'` plus one.
+        A one-based exposure group index is therefore numbered from two.
+
+        Note that if a single exposure group contains particles with *differing*
+        optics parameters, only those of its first particle are kept.
 
     **Arguments:**
 
@@ -144,9 +156,6 @@ def _convert_csparc_data_to_starfile_data(
 ) -> dict[str, pd.DataFrame]:
     relion_data = _convert_csparc_columns_to_relion(csparc_data)
     optics_data, particle_data = _split_optics_and_particle_data(relion_data)
-    # The 'uid' is only needed to match particles to their optics group, and is
-    # not a STAR file entry
-    particle_data = particle_data.drop(columns="uid", errors="ignore")
     return dict(optics=optics_data, particles=particle_data)
 
 
@@ -156,8 +165,22 @@ def _convert_csparc_columns_to_relion(csparc_data: pd.DataFrame) -> pd.DataFrame
     """
     columns = csparc_data.columns
     relion_data: dict[str, Any] = {}
-    if "uid" in columns:
-        relion_data["uid"] = _column_to_array(csparc_data, "uid")
+
+    # --- Optics group ---
+    # The CryoSPARC exposure group is the RELION optics group. Following `pyem`,
+    # the CryoSPARC index is taken to be zero-based and is shifted to RELION's
+    # one-based index
+    if "ctf/exp_group_id" in columns:
+        exposure_group = _column_to_array(csparc_data, "ctf/exp_group_id")
+        optics_group = exposure_group.astype(np.int64) + 1
+        # A RELION optics group must be one or greater. This is already the case
+        # for a zero-based or one-based exposure group, and is only not the case
+        # if CryoSPARC wrote a negative index, e.g. a '-1' placeholder
+        if optics_group.size > 0 and optics_group.min() < 1:
+            optics_group += 1 - optics_group.min()
+        relion_data["rlnOpticsGroup"] = optics_group
+    else:
+        relion_data["rlnOpticsGroup"] = np.ones(len(csparc_data), dtype=np.int64)
 
     # --- Optics fields ---
     pixel_size = None
@@ -246,8 +269,7 @@ def _split_optics_and_particle_data(
     relion_data: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Split per-particle RELION columns into an optics block, with one row per
-    unique combination of optics parameters, and a particle block that points
-    into it via 'rlnOpticsGroup'.
+    optics group, and a particle block that points into it via 'rlnOpticsGroup'.
     """
     optics_columns = [
         column for column in RELION_OPTICS_COLUMNS if column in relion_data.columns
@@ -261,39 +283,17 @@ def _split_optics_and_particle_data(
             f"of the optics parameters {tuple(RELION_OPTICS_COLUMNS)} could be read "
             "from it."
         )
-    # Number the unique combinations of optics parameters, one index per particle.
-    # `sort = False` numbers the groups in order of first appearance, and
-    # `dropna = False` keeps rows with missing parameters grouped together
-    optics_per_particle = relion_data[optics_columns]
-    optics_group_per_particle = (
-        optics_per_particle.groupby(optics_columns, sort=False, dropna=False).ngroup() + 1
-    )
-    # The optics block: one row per group
+    # The optics block: one row per optics group, holding the parameters of the
+    # group's first particle. Groups with equal parameters are kept separate, so
+    # that the optics groups of the CryoSPARC file are preserved
     optics_data = (
-        optics_per_particle.assign(rlnOpticsGroup=optics_group_per_particle)
+        relion_data[["rlnOpticsGroup", *optics_columns]]
         .drop_duplicates(subset="rlnOpticsGroup")
         .sort_values("rlnOpticsGroup")
-        .reset_index(drop=True)[["rlnOpticsGroup", *optics_columns]]
+        .reset_index(drop=True)
     )
-    # The particle block: assign each particle to its group, keyed on the
-    # CryoSPARC 'uid'
-    particle_data = relion_data[particle_columns].copy()
-    if "uid" in relion_data.columns:
-        uid = relion_data["uid"]
-        if uid.duplicated().any():
-            raise ValueError(
-                "Tried to assign an optics group to each particle using the "
-                "CryoSPARC 'uid', but found duplicate 'uid' values. Make sure "
-                "that the `.cs` file, and any passthrough file, contain one "
-                "entry per particle."
-            )
-        optics_group_of_uid = pd.Series(
-            optics_group_per_particle.to_numpy(), index=uid.to_numpy()
-        )
-        particle_data["uid"] = uid
-        particle_data["rlnOpticsGroup"] = uid.map(optics_group_of_uid).to_numpy()
-    else:
-        particle_data["rlnOpticsGroup"] = optics_group_per_particle.to_numpy()
+    # The particle block: one row per particle, pointing into the optics block
+    particle_data = relion_data[[*particle_columns, "rlnOpticsGroup"]].copy()
 
     for data in (optics_data, particle_data):
         for column in ("rlnOpticsGroup", "rlnImageSize"):

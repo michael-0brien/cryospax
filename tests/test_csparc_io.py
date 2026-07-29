@@ -59,6 +59,9 @@ def make_csparc_fields(num_particles: int = 3, **overrides) -> dict:
         "blob/micrograph_blob/path": np.array(
             [f"J1/mics/{i:04d}.mrc".encode() for i in index], dtype="S32"
         ),
+        # A single exposure group, which is optics group 1 after the
+        # zero-to-one-based shift
+        "ctf/exp_group_id": np.zeros(num_particles, dtype="<u4"),
         "ctf/accel_kv": np.full(num_particles, 300.0, dtype="<f4"),
         "ctf/cs_mm": np.full(num_particles, 2.7, dtype="<f4"),
         "ctf/amp_contrast": np.full(num_particles, 0.1, dtype="<f4"),
@@ -95,20 +98,6 @@ def passthrough_path(tmp_path):
         **{"blob/psize_A": np.full(3, 99.0, dtype="<f4")},
         **{"location/micrograph_uid": np.arange(10, 13, dtype="<u8")},
     )
-
-
-@pytest.fixture
-def unique_uid_csfile_path(tmp_path, sample_csfile_path):
-    """The sample '.cs' file, whose 'uid' entries are all zero, with unique
-    'uid' entries so that it can be converted to STAR file data.
-    """
-    csparc_array = np.load(sample_csfile_path)
-    csparc_array = csparc_array.copy()
-    csparc_array["uid"] = np.arange(1, len(csparc_array) + 1)
-    path = tmp_path / "sample_with_unique_uid.cs"
-    with open(path, "wb") as file:
-        np.save(file, csparc_array)
-    return path
 
 
 #
@@ -396,44 +385,132 @@ class TestConvertToStarfileData:
 
 
 class TestOpticsGroups:
-    def test_groups_identical_optics_parameters(self, csfile_path):
-        starfile_data = read_csparc_file_as_starfile(csfile_path)
+    """The RELION optics group is the CryoSPARC exposure group
+    'ctf/exp_group_id', following `pyem`.
+    """
 
-        assert len(starfile_data["optics"]) == 1
-        np.testing.assert_array_equal(starfile_data["particles"]["rlnOpticsGroup"], 1)
-
-    def test_splits_distinct_optics_parameters(self, tmp_path):
+    def test_shifts_zero_based_exposure_groups(self, tmp_path):
         fields = make_csparc_fields(num_particles=4)
-        # Two pixel sizes and two voltages, in three unique combinations
-        fields["blob/psize_A"] = np.array([1.5, 3.0, 1.5, 1.5], dtype="<f4")
-        fields["ctf/accel_kv"] = np.array([300.0, 300.0, 200.0, 300.0], dtype="<f4")
-        path = write_csfile(tmp_path / "many_optics_groups.cs", **fields)
+        fields["ctf/exp_group_id"] = np.array([0, 1, 2, 0], dtype="<u4")
+        path = write_csfile(tmp_path / "zero_based_groups.cs", **fields)
         starfile_data = read_csparc_file_as_starfile(path)
 
         optics_data, particle_data = starfile_data["optics"], starfile_data["particles"]
         assert len(optics_data) == 3
-        # Groups are numbered from one, in order of first appearance
         np.testing.assert_array_equal(optics_data["rlnOpticsGroup"], [1, 2, 3])
         np.testing.assert_array_equal(particle_data["rlnOpticsGroup"], [1, 2, 3, 1])
-        # ... and every particle's optics parameters are those of its group
-        optics_of_particle = particle_data[["rlnOpticsGroup"]].merge(
-            optics_data, on="rlnOpticsGroup", how="left"
+
+    def test_shifts_one_based_exposure_groups_from_two(self, tmp_path):
+        """A one-based index is numbered from two, as `pyem` does."""
+        fields = make_csparc_fields(num_particles=4)
+        fields["ctf/exp_group_id"] = np.array([1, 2, 3, 1], dtype="<u4")
+        path = write_csfile(tmp_path / "one_based_groups.cs", **fields)
+        starfile_data = read_csparc_file_as_starfile(path)
+
+        optics_data, particle_data = starfile_data["optics"], starfile_data["particles"]
+        assert len(optics_data) == 3
+        np.testing.assert_array_equal(optics_data["rlnOpticsGroup"], [2, 3, 4])
+        np.testing.assert_array_equal(particle_data["rlnOpticsGroup"], [2, 3, 4, 2])
+
+    def test_shifts_negative_exposure_groups(self, tmp_path):
+        """A RELION optics group must be one or greater, so a negative CryoSPARC
+        index, e.g. a '-1' placeholder, is shifted up rather than written out.
+        """
+        fields = make_csparc_fields(num_particles=3)
+        fields["ctf/exp_group_id"] = np.array([-1, 0, 1], dtype="<i4")
+        path = write_csfile(tmp_path / "negative_groups.cs", **fields)
+        starfile_data = read_csparc_file_as_starfile(path)
+
+        np.testing.assert_array_equal(
+            starfile_data["optics"]["rlnOpticsGroup"], [1, 2, 3]
         )
-        np.testing.assert_allclose(
-            optics_of_particle["rlnImagePixelSize"], fields["blob/psize_A"]
+        np.testing.assert_array_equal(
+            starfile_data["particles"]["rlnOpticsGroup"], [1, 2, 3]
         )
-        np.testing.assert_allclose(
-            optics_of_particle["rlnVoltage"], fields["ctf/accel_kv"]
+
+    def test_never_writes_an_optics_group_below_one(self, tmp_path):
+        """However the exposure group is indexed, the result must be a valid
+        RELION index.
+        """
+        for name, exposure_group in (
+            ("zero_based", np.arange(3, dtype="<u4")),
+            ("one_based", np.arange(1, 4, dtype="<u4")),
+            ("single_zero", np.zeros(3, dtype="<u4")),
+            ("single_one", np.ones(3, dtype="<u4")),
+            ("sparse", np.array([4, 9, 4], dtype="<u4")),
+            ("negative", np.array([-1, -1, 3], dtype="<i4")),
+            ("all_negative", np.full(3, -5, dtype="<i4")),
+        ):
+            fields = make_csparc_fields()
+            fields["ctf/exp_group_id"] = exposure_group
+            path = write_csfile(tmp_path / f"{name}.cs", **fields)
+            starfile_data = read_csparc_file_as_starfile(path)
+
+            assert starfile_data["optics"]["rlnOpticsGroup"].min() >= 1, name
+            assert starfile_data["particles"]["rlnOpticsGroup"].min() >= 1, name
+
+    def test_does_not_merge_groups_with_equal_parameters(self, tmp_path):
+        """Exposure groups are preserved even when their optics parameters are
+        identical, so the optics block may hold duplicate rows.
+        """
+        fields = make_csparc_fields(num_particles=4)
+        fields["ctf/exp_group_id"] = np.arange(4, dtype="<u4")
+        path = write_csfile(tmp_path / "duplicate_optics.cs", **fields)
+        optics_data = read_csparc_file_as_starfile(path)["optics"]
+
+        assert len(optics_data) == 4
+        np.testing.assert_array_equal(optics_data["rlnOpticsGroup"], [1, 2, 3, 4])
+        assert len(optics_data[RELION_OPTICS_COLUMNS].drop_duplicates()) == 1
+
+    def test_preserves_non_contiguous_exposure_groups(self, tmp_path):
+        """A job may keep only some of a project's exposure groups, leaving gaps
+        in the numbering.
+        """
+        fields = make_csparc_fields(num_particles=3)
+        fields["ctf/exp_group_id"] = np.array([6, 2, 6], dtype="<u4")
+        path = write_csfile(tmp_path / "sparse_groups.cs", **fields)
+        starfile_data = read_csparc_file_as_starfile(path)
+
+        # Rows are sorted by group, and the group indices are not renumbered
+        np.testing.assert_array_equal(starfile_data["optics"]["rlnOpticsGroup"], [3, 7])
+        np.testing.assert_array_equal(
+            starfile_data["particles"]["rlnOpticsGroup"], [7, 3, 7]
         )
+
+    def test_single_group_without_exposure_groups(self, tmp_path):
+        fields = make_csparc_fields()
+        del fields["ctf/exp_group_id"]
+        path = write_csfile(tmp_path / "no_exposure_groups.cs", **fields)
+        starfile_data = read_csparc_file_as_starfile(path)
+
+        assert len(starfile_data["optics"]) == 1
+        np.testing.assert_array_equal(starfile_data["optics"]["rlnOpticsGroup"], [1])
+        np.testing.assert_array_equal(starfile_data["particles"]["rlnOpticsGroup"], 1)
+
+    def test_takes_parameters_of_the_first_particle_in_a_group(self, tmp_path):
+        """Nothing in the format guarantees that an exposure group has uniform
+        optics parameters. If it does not, the first particle's parameters win.
+        """
+        fields = make_csparc_fields(num_particles=3)
+        fields["ctf/exp_group_id"] = np.zeros(3, dtype="<u4")
+        fields["blob/psize_A"] = np.array([1.5, 3.0, 3.0], dtype="<f4")
+        path = write_csfile(tmp_path / "mixed_group.cs", **fields)
+        optics_data = read_csparc_file_as_starfile(path)["optics"]
+
+        assert len(optics_data) == 1
+        np.testing.assert_allclose(optics_data["rlnImagePixelSize"], [1.5])
+
+    def test_converts_file_with_duplicate_uid(self, sample_csfile_path):
+        """Particles are no longer matched to their optics group through the
+        CryoSPARC 'uid', so a file whose 'uid' entries repeat converts fine.
+        """
+        starfile_data = read_csparc_file_as_starfile(sample_csfile_path)
+
+        assert len(starfile_data["particles"]) == 3
+        assert "uid" not in starfile_data["particles"].columns
 
 
 class TestConvertToStarfileDataErrors:
-    def test_error_with_duplicate_uid(self, sample_csfile_path):
-        # Every 'uid' of the sample file is zero, so particles cannot be
-        # assigned to an optics group
-        with pytest.raises(ValueError, match="duplicate 'uid'"):
-            read_csparc_file_as_starfile(sample_csfile_path)
-
     def test_error_with_non_square_images(self, tmp_path):
         fields = make_csparc_fields()
         fields["blob/shape"] = np.array([[8, 4], [8, 4], [8, 4]], dtype="<u4")
@@ -464,8 +541,8 @@ class TestConvertToStarfileDataErrors:
 
 class TestMatchesReferenceStarfile:
     @pytest.fixture
-    def converted_parameter_file(self, tmp_path, unique_uid_csfile_path):
-        starfile_data = read_csparc_file_as_starfile(unique_uid_csfile_path)
+    def converted_parameter_file(self, tmp_path, sample_csfile_path):
+        starfile_data = read_csparc_file_as_starfile(sample_csfile_path)
         path_to_starfile = tmp_path / "converted.star"
         write_starfile(starfile_data, path_to_starfile)
         return RelionParticleParameterFile(
@@ -493,6 +570,11 @@ class TestMatchesReferenceStarfile:
                 rtol=1e-6,
                 err_msg=f"Optics column '{column}' does not match",
             )
+        # The sample file's exposure group is one-based, so, as in `pyem`, its
+        # optics group index is one greater than the reference's
+        np.testing.assert_array_equal(
+            converted["rlnOpticsGroup"], reference["rlnOpticsGroup"] + 1
+        )
 
     def test_ctf_parameters(self, converted_parameter_file, reference_parameter_file):
         converted = converted_parameter_file[:]["transfer_theory"]
@@ -594,15 +676,15 @@ class TestCsparc2Spax:
         result = run_csparc2spax(csfile_path, path_to_starfile, "--overwrite")
         assert result.returncode == 0, result.stderr
 
-    def test_reports_conversion_errors_without_a_traceback(
-        self, tmp_path, sample_csfile_path
-    ):
-        # The sample file has duplicate 'uid' entries
-        result = run_csparc2spax(sample_csfile_path, tmp_path / "particles.star")
+    def test_reports_conversion_errors_without_a_traceback(self, tmp_path):
+        fields = make_csparc_fields()
+        fields["blob/shape"] = np.full((3, 2), [8, 4], dtype="<u4")
+        path = write_csfile(tmp_path / "non_square.cs", **fields)
+        result = run_csparc2spax(path, tmp_path / "particles.star")
 
         assert result.returncode == 1
         assert "Traceback" not in result.stderr
-        assert "duplicate 'uid'" in result.stderr
+        assert "Non-square" in result.stderr
 
     def test_help_documents_that_this_is_not_a_general_converter(self):
         result = run_csparc2spax("--help")
