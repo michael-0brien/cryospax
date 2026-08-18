@@ -14,6 +14,11 @@ def sample_starfile_path():
 
 
 @pytest.fixture
+def sample_csfile_path():
+    return os.path.join(os.path.dirname(__file__), "data", "test_csfile.cs")
+
+
+@pytest.fixture
 def sample_relion_project_path():
     return os.path.join(os.path.dirname(__file__), "data")
 

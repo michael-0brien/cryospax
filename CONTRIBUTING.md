@@ -54,7 +54,7 @@ python -m pip install -e '.[docs]'
 mkdocs build
 ```
 
-You can also run `mkdocs serve` and follow the instructions in your terminal to inpsect the webpage on your local server.
+You can also run `mkdocs serve` and follow the instructions in your terminal to inspect the webpage on your local server.
 
 To run the notebooks in the documentation, it may be necessary to pull large-ish files from [git LFS](https://git-lfs.com/).
 

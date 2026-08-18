@@ -6,6 +6,8 @@ ci:
   autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
   autoupdate_schedule: monthly
 
+exclude: \.cs$
+
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: "v6.0.0"
